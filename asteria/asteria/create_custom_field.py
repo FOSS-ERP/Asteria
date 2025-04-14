@@ -10,7 +10,8 @@ def setup_custom_fields():
                 "label" : "Cost Center",
                 "fieldtype" : "Link",
                 "options" : "Cost Center",
-                "insert_after" : "project"
+                "insert_after" : "posting_time",
+                "allow_on_submit" : 1
             }
         ]
     }

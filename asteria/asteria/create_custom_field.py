@@ -13,6 +13,15 @@ def setup_custom_fields():
                 "insert_after" : "posting_time",
                 "allow_on_submit" : 1
             }
+        ],
+        "Stock Entry Detail": [
+            {
+                "label" : "Has Serial No Replaced",
+                "fieldname" : "has_serial_no_replaced",
+                "fieldtype" : "Check",
+                "insert_after" : "use_serial_batch_fields",
+                "allow_on_submit" : 0
+            }
         ]
     }
     

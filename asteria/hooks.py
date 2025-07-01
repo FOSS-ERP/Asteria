@@ -20,7 +20,9 @@ app_license = "mit"
 # 		"has_permission": "asteria.api.permission.has_app_permission"
 # 	}
 # ]
-
+# app_include_js = [
+#     "asteria.bundle.js"
+# ]
 # Includes in <head>
 # ------------------
 
@@ -43,7 +45,7 @@ app_license = "mit"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {"Stock Entry" : "public/js/stock_entry.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -130,20 +132,21 @@ after_migrate = "asteria.asteria.create_custom_field.setup_custom_fields"
 # Override standard doctype classes
 
 # override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
+# 	"Stock Entry": "asteria.asteria.override.stock_entry.CustomStockEntry"
 # }
 
 # Document Events
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Serial and Batch Bundle": {
+		"validate": "asteria.asteria.override.serial_and_batch_bundle.validate",
+	},
+	"Stock Entry": {
+		"on_submit": "asteria.asteria.stock_entry.on_submit"
+	}
+}
 
 # Scheduled Tasks
 # ---------------
@@ -174,9 +177,10 @@ after_migrate = "asteria.asteria.create_custom_field.setup_custom_fields"
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "asteria.event.get_events"
-# }
+override_whitelisted_methods = {
+	"erpnext.stock.doctype.serial_and_batch_bundle.serial_and_batch_bundle.get_auto_data": "asteria.asteria.override.serial_and_batch_bundle.get_auto_data",
+	"hrms.overrides.employee_payment_entry.get_payment_entry_for_employee" : "asteria.asteria.override.employee_payment_entry.get_payment_entry_for_employee"
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,

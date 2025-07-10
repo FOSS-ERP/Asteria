@@ -145,29 +145,22 @@ doc_events = {
 	},
 	"Stock Entry": {
 		"on_submit": "asteria.asteria.stock_entry.on_submit"
+	},
+	"Expense Claim" : {
+		"validate" : "asteria.asteria.doc_events.expense_claim.validate"
 	}
 }
 
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"asteria.tasks.all"
-# 	],
-# 	"daily": [
-# 		"asteria.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"asteria.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"asteria.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"asteria.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"cron": {
+		"0 6 * * *" : [
+			"asteria.asteria.doc_events.expense_claim.execute_alert"
+		]
+	},
+}
 
 # Testing
 # -------

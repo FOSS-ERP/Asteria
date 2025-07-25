@@ -254,7 +254,7 @@ def validate(self, method):
     if self.workflow_state == 'Waiting for Finance Manager Approval' and self.get_doc_before_save().workflow_state != 'Waiting for Finance Manager Approval':
         finance_approver = get_users_by_role("Finance Approver")
         for row in finance_approver:
-            if not frappe.db.get_value("User", row, "enabled"):
+            if not frappe.db.get_value("User", row, "enabled") or row  == 'Administrator':
                 continue
             message = f"""
                 <!DOCTYPE html>

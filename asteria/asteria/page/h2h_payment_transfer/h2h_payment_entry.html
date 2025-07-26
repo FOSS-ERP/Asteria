@@ -1,0 +1,45 @@
+<style>
+    .vendor-payment-wrapper .badge {
+    font-size: 0.9rem;
+    padding: 0.4em 0.6em;
+    border-radius: 0.4rem;
+}
+
+.vendor-payment-wrapper table th,
+.vendor-payment-wrapper table td {
+    vertical-align: middle;
+}
+
+</style>
+<div class="vendor-payment-wrapper">
+    <table class="table table-bordered" id="vendor-payment-table">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="select-all"></th>
+                <th>Payment Entry</th>
+                <th>Reference Name</th>
+                <th>Party Type</th>
+                <th>Party Name</th>
+                <th>Posting Date</th>
+                <th>Total Allocated Amount</th>
+                <th>Account Currency (To)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                <td>
+                    <input type="checkbox" class="purchase_invoice_no" data-invoice="{{ row.payment_entry }}">
+                </td>
+                <td><a href="/desk/Form/Payment Entry/{{ row.payment_entry }}">{{ row.payment_entry }}</a></td>
+                <td><a href="/desk/Form/{{ row.reference_doctype }}/{{ row.reference_name }}">{{ row.reference_name }}</a></td>
+                <td>{{ row.party_type }}</td>
+                <td width="30%"><a href="/desk/Form/{{row.party_type}}/{{ row.party }}">{{ row.party_name }}</a></td>
+                <td>{{ row.posting_date }}</td>
+                <td width="10%">{{ row.total_allocated_amount }}</td>
+                <td width="10%">{{ row.paid_to_account_currency }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

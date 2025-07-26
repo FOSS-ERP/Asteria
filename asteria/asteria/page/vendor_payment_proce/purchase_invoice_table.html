@@ -1,0 +1,39 @@
+<style>
+    .vendor-payment-wrapper .badge {
+    font-size: 0.9rem;
+    padding: 0.4em 0.6em;
+    border-radius: 0.4rem;
+}
+
+.vendor-payment-wrapper table th,
+.vendor-payment-wrapper table td {
+    vertical-align: middle;
+}
+
+</style>
+<div class="vendor-payment-wrapper">
+    <table class="table table-bordered" id="vendor-payment-table">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="select-all"></th>
+                <th>Purchase Invoice No</th>
+                <th>Supplier Name</th>
+                <th>Date</th>
+                <th>Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                <td>
+                    <input type="checkbox" class="purchase_invoice_no" data-invoice="{{ row.purchase_invoice_no }}">
+                </td>
+                <td><a href="/desk/Form/Purchase Invoice/{{ row.purchase_invoice_no }}">{{ row.purchase_invoice_no }}</a></td>
+                <td><a href="/desk/Form/Supplier/{{ row.supplier_name }}">{{ row.supplier_name }}</a></td>
+                <td>{{ row.date }}</td>
+                <td>{{ row.amount }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

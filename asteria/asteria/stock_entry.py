@@ -75,3 +75,12 @@ def show_serial_no_transaction(self):
         """
 
         frappe.msgprint(message)
+
+
+@frappe.whitelist()
+def get_serial_no(serial_and_batch_bundle):
+    ssb_serial_no = frappe.get_doc("Serial and Batch Bundle", serial_and_batch_bundle)
+    serial_no_list = [
+        row.serial_no for row in ssb_serial_no.entries
+    ]
+    return serial_no_list

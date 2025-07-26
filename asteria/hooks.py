@@ -45,7 +45,11 @@ app_license = "mit"
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-doctype_js = {"Stock Entry" : "public/js/stock_entry.js"}
+doctype_js = {
+	"Stock Entry" : "public/js/stock_entry.js",
+	"Expense Claim" : "public/js/expense_claim.js",
+	"Expense Claim Type" : "public/js/expense_claim_type.js",
+	}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -148,6 +152,9 @@ doc_events = {
 	},
 	"Expense Claim" : {
 		"validate" : "asteria.asteria.doc_events.expense_claim.validate"
+	},
+	"Job Card": {
+		"on_submit": "asteria.asteria.doc_events.job_card.on_submit"
 	}
 }
 

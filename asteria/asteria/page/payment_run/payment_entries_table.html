@@ -10,6 +10,8 @@
                 <tr>
                     <th><input type="checkbox" id="select-all"></th>
                     <th>Expense Claim</th>
+                    <th>Employee</th>
+                    <th>Employee Name</th>
                     <th>Amount</th>
                     <th class="sortable" data-sort-key="posting_date">
                         Date
@@ -23,6 +25,12 @@
                 <tr>
                     <td>
                         <input type="checkbox" class="document-selected" data-invoice="{{ row.document_name }}">
+                    </td>
+                    <td>
+                        <a href="/desk/Form/Employee/{{ row.employee }}">{{ row.employee }}</a>
+                    </td>
+                    <td>
+                        {{ row.employee_name }}
                     </td>
                     <td>
                         <a href="/desk/Form/Expense Claim/{{ row.document_name }}" class="text-decoration-none">

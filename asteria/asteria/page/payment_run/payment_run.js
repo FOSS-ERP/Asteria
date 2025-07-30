@@ -63,6 +63,19 @@ frappe.pages['payment-run'].on_page_load = function(wrapper) {
 		label: __('Supplier'),
 		fieldtype: 'Link',
 		options: 'Supplier',
+		onchange:()=>{
+			frappe.payment_run.run(page);
+		}
+	});
+
+	page.employee = page.add_field({
+		fieldname: 'employee',
+		label: __('Employee'),
+		fieldtype: 'Link',
+		options: 'Employee',
+		onchange:()=>{
+			frappe.payment_run.run(page);
+		}
 	});
 
 	frappe.payment_run.make(page);
@@ -77,6 +90,8 @@ function toggle_date_filters(page) {
 	page.supplier.toggle(show)
 	const due_date_show = (selected === "Purchase Invoice");
 	page.due_date.toggle(due_date_show);
+	const showemployee = (selected === "Expense Claim")
+	page.employee.toggle(showemployee)
 }
 
 frappe.payment_run = {
@@ -159,7 +174,8 @@ frappe.payment_run = {
 		let from_date = me.page.fields_dict.from_date.get_value();
 		let to_date = me.page.fields_dict.to_date.get_value();
 		let supplier = me.page.fields_dict.supplier.get_value();
-		let OrderBy = null;
+		let employee = me.page.fields_dict.employee.get_value();
+		let OrderBy = '';
 		let sort_icon = document.querySelector(".sort-icon-pe");
 		if (sort_icon) {
 			OrderBy = sort_icon.getAttribute("data-order-type");
@@ -173,9 +189,11 @@ frappe.payment_run = {
 				from_date: from_date,
 				to_date: to_date,
 				supplier: supplier,
-				orderby : OrderBy
+				orderby : OrderBy,
+				employee : employee
 			},
-			
+			freeze:true,
+			freeze_message: __("Loading ......"),
 			callback: function (r) {
 				let data = r.message.data || [];
 

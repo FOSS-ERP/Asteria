@@ -22,17 +22,19 @@ from erpnext.utilities import payment_app_import_guard
 from frappe.core.doctype.session_default_settings.session_default_settings import get_session_default_values
 
 @frappe.whitelist()
-def get_entries(document_type, due_date=None, from_date=None, to_date=None, supplier=None, orderby=None):
-
-	if not orderby:
+def get_entries(document_type, due_date=None, from_date=None, to_date=None, supplier=None, orderby=None, employee=None):
+	if not orderby or orderby == None or orderby == '':
 		orderby = "DESC"
+	condition = ''
+	if employee:
+		condition = f" and ec.employee = '{employee}'"
 	if document_type == "Expense Claim":
 		data = frappe.db.sql(f"""
 				Select 
-					ec.name as document_name, ec.grand_total, ec.posting_date, ec.expense_approver, ec.approval_status
+					ec.name as document_name, ec.grand_total, ec.posting_date, ec.expense_approver, ec.approval_status, ec.employee, ec.employee_name
 				From 
 					`tabExpense Claim` as ec
-				Where (ec.workflow_state = 'Approved' or ec.approval_status = 'Approved') and ec.is_paid = 0 and ec.docstatus = 1 AND NOT EXISTS (
+				Where (ec.workflow_state = 'Approved' or ec.approval_status = 'Approved') and ec.is_paid = 0 and ec.docstatus = 1 {condition} AND NOT EXISTS (
 					SELECT name 
 						FROM `tabPayment Entry Reference` per
 						WHERE 

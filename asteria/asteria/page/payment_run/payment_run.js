@@ -58,6 +58,13 @@ frappe.pages['payment-run'].on_page_load = function(wrapper) {
 		},
 	});
 
+	page.supplier = page.add_field({
+		fieldname: 'supplier',
+		label: __('Supplier'),
+		fieldtype: 'Link',
+		options: 'Supplier',
+	});
+
 	frappe.payment_run.make(page);
 }
 
@@ -67,6 +74,7 @@ function toggle_date_filters(page) {
 	const show = (selected === "Purchase Invoice" || selected === "Purchase Order");
 	page.from_date.toggle(show);
 	page.to_date.toggle(show);
+	page.supplier.toggle(show)
 	const due_date_show = (selected === "Purchase Invoice");
 	page.due_date.toggle(due_date_show);
 }
@@ -131,7 +139,14 @@ frappe.payment_run = {
 			$('#select-all').prop('checked', allChecked);
 			updateSelectedCount();
 		});
-		
+		$(document).on('click', '.sort-icon-pe', ()=>{
+			const icon = document.querySelector(".sort-icon-pe");
+			const currentOrder = icon.getAttribute("data-order-type");
+			const newOrder = currentOrder === "ASC" ? "DESC" : "ASC";
+			icon.setAttribute("data-order-type", newOrder);
+			icon.textContent = newOrder === "ASC" ? "↑" : "↓";
+			me.run();
+		})
 		// Auto-run on page load if you want:
 		me.run();
 	},
@@ -143,26 +158,42 @@ frappe.payment_run = {
 		let due_date = me.page.fields_dict.due_date.get_value();
 		let from_date = me.page.fields_dict.from_date.get_value();
 		let to_date = me.page.fields_dict.to_date.get_value();
-
+		let supplier = me.page.fields_dict.supplier.get_value();
+		let OrderBy = null;
+		let sort_icon = document.querySelector(".sort-icon-pe");
+		if (sort_icon) {
+			OrderBy = sort_icon.getAttribute("data-order-type");
+		}
+		console.log(OrderBy)
 		frappe.call({
 			method: 'asteria.asteria.page.payment_run.get_entries',
 			args: {
 				document_type: document_type,
 				due_date: due_date,
 				from_date: from_date,
-				to_date: to_date
+				to_date: to_date,
+				supplier: supplier,
+				orderby : OrderBy
 			},
-			freeze: true,
-			freeze_message: __("Loading ..."),
+			
 			callback: function (r) {
 				let data = r.message.data || [];
-				// Make sure DOM is available before rendering
+
 				let parent = me.page.main.find('.entries_table');
 				parent.empty();
 
 				if (data.length > 0) {
 					let html = frappe.render_template('payment_entries_table', r.message);
-					parent.append(html);
+
+					let tempDiv = document.createElement("div");
+					tempDiv.innerHTML = html;
+
+					let sortIcon = tempDiv.querySelector(".sort-icon-pe");
+					if (sortIcon) {
+						sortIcon.setAttribute("data-order-type", OrderBy);
+					}
+					
+					parent.append(tempDiv);
 				} else {
 					parent.html(`<div class="text-muted text-center">No Data Found</div>`);
 				}

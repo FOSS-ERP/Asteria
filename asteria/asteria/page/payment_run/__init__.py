@@ -22,7 +22,10 @@ from erpnext.utilities import payment_app_import_guard
 from frappe.core.doctype.session_default_settings.session_default_settings import get_session_default_values
 
 @frappe.whitelist()
-def get_entries(document_type, due_date=None, from_date=None, to_date=None):
+def get_entries(document_type, due_date=None, from_date=None, to_date=None, supplier=None, orderby=None):
+
+	if not orderby:
+		orderby = "DESC"
 	if document_type == "Expense Claim":
 		data = frappe.db.sql(f"""
 				Select 
@@ -36,6 +39,7 @@ def get_entries(document_type, due_date=None, from_date=None, to_date=None):
 							per.reference_name = ec.name
 							AND per.docstatus = 0
 					)
+				Order By ec.posting_date {orderby}
 		""", as_dict=1)
 		for row in data:
 			row.update({
@@ -45,14 +49,16 @@ def get_entries(document_type, due_date=None, from_date=None, to_date=None):
 	
 	filter = ''
 	if due_date:
-		filter += f" and posting_date <= '{due_date}'"
+		filter += f" and pi.posting_date <= '{due_date}'"
 	if from_date:
-		filter += f" and posting_date >= '{from_date}'"
+		filter += f" and pi.posting_date >= '{from_date}'"
 	if to_date:
-		filter += f" and posting_date <= '{to_date}'"
+		filter += f" and pi.posting_date <= '{to_date}'"
+	if supplier:
+		filter += f" and pi.supplier = '{supplier}'"
 	
 
-	if document_type == "Purchase Invoice":
+	if document_type == "Purchase Invoice":		
 		data = frappe.db.sql(f""" 
 				Select pi.name as document_name, pi.grand_total, pi.supplier, pi.supplier_name, pi.posting_date, pi.status, pi.outstanding_amount, pi.currency
 				From `tabPurchase Invoice` as pi
@@ -62,7 +68,9 @@ def get_entries(document_type, due_date=None, from_date=None, to_date=None):
 						WHERE 
 							per.reference_name = pi.name
 							AND per.docstatus = 0
+							
 					)
+				Order By pi.posting_date {orderby}
 		""",as_dict=1)
 		for row in data:
 			row.update({
@@ -90,6 +98,7 @@ def get_entries(document_type, due_date=None, from_date=None, to_date=None):
 							per.reference_name = po.name
 							AND per.docstatus = 0
 					)
+				Order By po.transaction_date {orderby}
 		""",as_dict=1)
 		for row in data:
 			row.update({

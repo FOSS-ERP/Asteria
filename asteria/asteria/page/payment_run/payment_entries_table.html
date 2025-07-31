@@ -10,8 +10,13 @@
                 <tr>
                     <th><input type="checkbox" id="select-all"></th>
                     <th>Expense Claim</th>
+                    <th>Employee</th>
+                    <th>Employee Name</th>
                     <th>Amount</th>
-                    <th>Date</th>
+                    <th class="sortable" data-sort-key="posting_date">
+                        Date
+                        <span class="sort-icon sort-icon-pe" data-order-type="ASC">⇅</span>
+                    </th>                    
                     <th>Status</th>
                 </tr>
             </thead>
@@ -20,6 +25,12 @@
                 <tr>
                     <td>
                         <input type="checkbox" class="document-selected" data-invoice="{{ row.document_name }}">
+                    </td>
+                    <td>
+                        <a href="/desk/Form/Employee/{{ row.employee }}">{{ row.employee }}</a>
+                    </td>
+                    <td>
+                        {{ row.employee_name }}
                     </td>
                     <td>
                         <a href="/desk/Form/Expense Claim/{{ row.document_name }}" class="text-decoration-none">
@@ -40,7 +51,10 @@
                     <th><input type="checkbox" id="select-all"></th>
                     <th>Purchase Invoice</th>
                     <th width="30%">Supplier Name</th>
-                    <th>Date</th>
+                    <th class="sortable" data-sort-key="posting_date">
+                        Date
+                        <span class="sort-icon sort-icon-pe" data-order-type="ASC">⇅</span>
+                    </th>
                     <th>Currency</th>
                     <th>Amount</th>
                     <th>Status</th>
@@ -77,7 +91,10 @@
                     <th><input type="checkbox" id="select-all"></th>
                     <th>Purchase Order</th>
                     <th width="30%">Supplier Name</th>
-                    <th>Date</th>
+                    <th class="sortable" data-sort-key="posting_date">
+                        Date
+                        <span class="sort-icon sort-icon-pe" data-order-type="ASC">⇅</span>
+                    </th>
                     <th>Currency</th>
                     <th>Amount</th>
                     <th>Advance Paid</th>
@@ -122,6 +139,16 @@
 .vendor-payment-wrapper table th,
 .vendor-payment-wrapper table td {
     vertical-align: middle;
+}
+.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.sort-icon {
+    font-size: 0.9rem;
+    margin-left: 0.3rem;
+    color: #6c757d;
 }
 
 </style>

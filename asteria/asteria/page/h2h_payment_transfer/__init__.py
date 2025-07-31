@@ -117,7 +117,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
 
         if payment_amount < 200000:
             A = "NFT"
-        elif bank_account.bank = "ICICI":
+        elif bank_account.bank == "ICICI":
             A = "WIB"
         else:
             A = "RTG"
@@ -237,7 +237,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
 
     filename = f"{file_naming}.csv"
 
-    saved_file = save_file(filename, buffer.read(), is_private=0, dt=None, dn=None)
+    saved_file = save_file(filename, buffer.read(), is_private=1, dt=None, dn=None)
 
     local_file_path = frappe.get_site_path() + saved_file.file_url
 

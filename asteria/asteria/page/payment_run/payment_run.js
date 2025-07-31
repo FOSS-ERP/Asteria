@@ -162,6 +162,14 @@ frappe.payment_run = {
 			icon.textContent = newOrder === "ASC" ? "↑" : "↓";
 			me.run();
 		})
+		$(document).on('click', '.sort-due-icon-pe', ()=>{
+			const icon = document.querySelector(".sort-due-icon-pe");
+			const currentOrder = icon.getAttribute("data-order-type");
+			const newOrder = currentOrder === "ASC" ? "DESC" : "ASC";
+			icon.setAttribute("data-order-type", newOrder);
+			icon.textContent = newOrder === "ASC" ? "↑" : "↓";
+			me.run();
+		})
 		// Auto-run on page load if you want:
 		me.run();
 	},
@@ -176,11 +184,12 @@ frappe.payment_run = {
 		let supplier = me.page.fields_dict.supplier.get_value();
 		let employee = me.page.fields_dict.employee.get_value();
 		let OrderBy = '';
+		let dueorderby = '';
 		let sort_icon = document.querySelector(".sort-icon-pe");
 		if (sort_icon) {
 			OrderBy = sort_icon.getAttribute("data-order-type");
 		}
-		console.log(OrderBy)
+	
 		frappe.call({
 			method: 'asteria.asteria.page.payment_run.get_entries',
 			args: {
@@ -190,7 +199,7 @@ frappe.payment_run = {
 				to_date: to_date,
 				supplier: supplier,
 				orderby : OrderBy,
-				employee : employee
+				employee : employee,
 			},
 			freeze:true,
 			freeze_message: __("Loading ......"),

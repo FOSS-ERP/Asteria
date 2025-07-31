@@ -56,6 +56,9 @@
                         Date
                         <span class="sort-icon sort-icon-pe" data-order-type="ASC">⇅</span>
                     </th>
+                    <th class="sortable" data-sort-key="due_date">
+                        Due Date
+                    </th>
                     <th>Currency</th>
                     <th>Amount</th>
                     <th>Status</th>
@@ -74,6 +77,7 @@
                     </td>
                     <td>{{ row.supplier_name }}</td>
                     <td>{{ row.posting_date }}</td>
+                    <td>{{ row.due_date }}</td>
                     <td>{{ row.currency }}</td>
                     <td>{{ row.outstanding_amount }}</td>
                     <td>

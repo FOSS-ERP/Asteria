@@ -25,6 +25,7 @@ from frappe.core.doctype.session_default_settings.session_default_settings impor
 def get_entries(document_type, due_date=None, from_date=None, to_date=None, supplier=None, orderby=None, employee=None):
 	if not orderby or orderby == None or orderby == '':
 		orderby = "DESC"
+
 	condition = ''
 	if employee:
 		condition = f" and ec.employee = '{employee}'"
@@ -62,7 +63,7 @@ def get_entries(document_type, due_date=None, from_date=None, to_date=None, supp
 
 	if document_type == "Purchase Invoice":		
 		data = frappe.db.sql(f""" 
-				Select pi.name as document_name, pi.grand_total, pi.supplier, pi.supplier_name, pi.posting_date, pi.status, pi.outstanding_amount, pi.currency
+				Select pi.name as document_name, pi.grand_total, pi.supplier, pi.supplier_name, pi.posting_date, pi.status, pi.outstanding_amount, pi.currency, pi.due_date
 				From `tabPurchase Invoice` as pi
 				Where pi.docstatus = 1 and pi.status != 'Paid' and pi.is_return != 1 {filter} AND NOT EXISTS (
 					SELECT per.name 

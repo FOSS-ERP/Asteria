@@ -10,6 +10,7 @@ from io import BytesIO
 from io import StringIO
 import csv
 import paramiko
+import datetime
 
 @frappe.whitelist()
 def get_vendor_payments(document_type):
@@ -49,7 +50,7 @@ from frappe.utils.file_manager import save_file
 import frappe
 
 @frappe.whitelist()
-def process_dummy_csv_and_create_updated_csv(invoices, document_type):
+def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_date):
     # Get file path from Accounts Settings
     file_path = frappe.db.get_value("Accounts Settings", "Accounts Settings", "payment_file")
 
@@ -75,8 +76,12 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type):
 
     headers = reader[header_row_index][:j_index] + ["j_value"]
 
-    processed_rows = reader[:header_row_index]  # Preserve metadata (first 3 rows)
+    processed_rows = reader[:header_row_index]  
     processed_rows.append(headers)
+    
+    date_obj = datetime.datetime.strptime(scheduled_date, "%Y-%m-%d")
+    formatted_date = date_obj.strftime("%B %d, %Y")  
+    processed_rows[1][4] = formatted_date
 
     grand_totals = []
     correct_data_only = True
@@ -175,7 +180,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type):
     count_valid = len(grand_totals)
     e1 = reader[0][4].strip() if len(reader[0]) > 4 else "000000000000"
     g1 = reader[0][6].strip() if len(reader[0]) > 6 else "REF001"
-    e2 = reader[1][4].strip() if len(reader[1]) > 4 else formatdate(today())
+    e2 = scheduled_date
 
     try:
         valid_j4 = (
@@ -212,6 +217,9 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type):
 
     upload_file(local_file_path)
 
+    for row in invoices:
+        frappe.db.set_value("Payment Entry", row, "h2h_transfered", 1)
+
     return {
         "file_url": saved_file.file_url,
         "file_name": saved_file.file_name
@@ -228,22 +236,31 @@ def connect_sftp():
 
 
     """Establish SFTP connection and return sftp client"""
-    transport = paramiko.Transport((SFTP_HOST, SFTP_PORT))
-    transport.connect(username=SFTP_USERNAME, password=SFTP_PASSWORD)
-    sftp = paramiko.SFTPClient.from_transport(transport)
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # <-- disables host key checking
+    client.connect(
+        hostname=SFTP_HOST,
+        port=SFTP_PORT,
+        username=SFTP_USERNAME,
+        password=SFTP_PASSWORD,
+        allow_agent=False,
+        look_for_keys=False
+    )
+    sftp = client.open_sftp()
+    return sftp, client
     return sftp, transport
 
+
 def upload_file(local_file_path, remote_file_name=None):
-    """Upload a file to the SFTP server"""
-    sftp, transport = connect_sftp()
+    sftp, client = connect_sftp()
     UPLOAD_PATH = "/In"
     try:
-        remote_path = f"{UPLOAD_PATH}/{os.path.basename(local_file_path)}"
+        remote_path = f"{UPLOAD_PATH}/{remote_file_name or os.path.basename(local_file_path)}"
         sftp.put(local_file_path, remote_path)
         frappe.msgprint(f"Uploaded file to {remote_path}")
     finally:
         sftp.close()
-        transport.close()
+        client.close()
 
 def download_file(remote_file_name, local_download_dir):
     """Download a file from the SFTP server"""

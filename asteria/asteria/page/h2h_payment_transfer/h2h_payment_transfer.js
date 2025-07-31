@@ -51,12 +51,18 @@ frappe.h2h_payment_transfer = {
 				return;
 			}
 			let document_type = me.page.document_type.get_value();
+			let scheduled_date = me.page.transaction_date.get_value();
+
+			if (!scheduled_date){
+				frappe.throw(frappe._("<b>Payment Process Date</b> is missing"))
+			}
 			// Call Python API
 			frappe.call({
 				method: 'asteria.asteria.page.h2h_payment_transfer.process_dummy_csv_and_create_updated_csv',
 				args: {
 					invoices: selected_invoices,
-					document_type : document_type
+					document_type : document_type,
+					scheduled_date : scheduled_date
 				},
 				freeze: true,
 				freeze_message: __("Loading ..."),

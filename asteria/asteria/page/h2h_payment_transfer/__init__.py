@@ -113,12 +113,20 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
         if not bank_account.account_name:
             frappe.throw("Account Name is missing in Bank Account Details {0}".format(get_link_to_form("Bank Account", bank_account.name)))
 
-        A = "NFT"
+        payment_amount = frappe.db.get_value("Payment Entry", invoice, "total_allocated_amount")
+
+        if payment_amount < 200000:
+            A = "NFT"
+        elif bank_account.bank = "ICICI":
+            A = "WIB"
+        else:
+            A = "RTG"
+            
         B = "054105000849"
         C = bank_account.branch_code
         D = bank_account.bank_account_no
         E = re.sub(r'[^A-Za-z0-9 ]+', ' ', bank_account.account_name)
-        F = frappe.db.get_value("Payment Entry", invoice, "total_allocated_amount")
+        F = payment_amount
         G = f"{invoice}"
         H = G
 

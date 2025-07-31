@@ -34,7 +34,7 @@ def get_entries(document_type, due_date=None, from_date=None, to_date=None, supp
 					ec.name as document_name, ec.grand_total, ec.posting_date, ec.expense_approver, ec.approval_status, ec.employee, ec.employee_name
 				From 
 					`tabExpense Claim` as ec
-				Where (ec.workflow_state = 'Approved' or ec.approval_status = 'Approved') and ec.is_paid = 0 and ec.docstatus = 1 {condition} AND NOT EXISTS (
+				Where (ec.workflow_state = 'Approved' or ec.approval_status = 'Approved') and ec.is_paid = 0 and ec.status != 'Paid' and ec.docstatus = 1 {condition} AND NOT EXISTS (
 					SELECT name 
 						FROM `tabPayment Entry Reference` per
 						WHERE 

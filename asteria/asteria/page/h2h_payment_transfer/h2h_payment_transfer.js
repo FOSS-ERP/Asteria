@@ -21,10 +21,7 @@ frappe.pages['h2h-payment-transfer'].on_page_load = function(wrapper) {
 	page.transaction_date = page.add_field({
 		fieldname: 'transaction_date',
 		label: __('Payment Process Date'),
-		fieldtype: 'Date',
-		onchange:()=>{
-			frappe.h2h_payment_transfer.run(page);
-		}
+		fieldtype: 'Date'
 	});
 
 	frappe.h2h_payment_transfer.make(page);

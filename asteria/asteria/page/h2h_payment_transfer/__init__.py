@@ -8,7 +8,9 @@ from frappe.utils.file_manager import save_file
 from frappe.utils import get_datetime, get_link_to_form
 from io import BytesIO
 from io import StringIO
+from frappe.model.naming import make_autoname
 import csv
+import re
 import paramiko
 import datetime
 
@@ -87,7 +89,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
     correct_data_only = True
     for row in range(300):
         reader.append(["","","","","","","","","",""])
-        
+    payment_process =[]
     for i, row in enumerate(reader[data_start_index:]):
         if i >= len(invoices):
             break
@@ -115,7 +117,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
         B = "054105000849"
         C = bank_account.branch_code
         D = bank_account.bank_account_no
-        E = bank_account.account_name
+        E = re.sub(r'[^A-Za-z0-9 ]+', ' ', bank_account.account_name)
         F = frappe.db.get_value("Payment Entry", invoice, "total_allocated_amount")
         G = f"{invoice}"
         H = G
@@ -174,6 +176,11 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
             j_value
         ]
         processed_rows.append(updated_row)
+        payment_process.append(invoice)
+    
+    if not payment_process:
+        frappe.throw("Please validate the Bank details for selected payment entry")
+
 
     # Summary Row - J4
     sum_total = sum(grand_totals)
@@ -181,7 +188,16 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
     e1 = reader[0][4].strip() if len(reader[0]) > 4 else "000000000000"
     g1 = reader[0][6].strip() if len(reader[0]) > 6 else "REF001"
     e2 = scheduled_date
-
+    if not (e1 and len(str(e1)) == 12):
+        frappe.throw("1")
+    if not (str(e1).isdigit()):
+        frappe.throw("2")
+    if not correct_data_only:
+        frappe.throw("3")
+    if not (g1 and len(str(g1)) < 11):
+        frappe.throw("4")
+    if not (len(str(sum_total)) < 16):
+        frappe.throw("5")
     try:
         valid_j4 = (
             e1 and len(str(e1)) == 12 and str(e1).isdigit() and
@@ -209,16 +225,25 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
     buffer = BytesIO(output.getvalue().encode())
     buffer.seek(0)
 
-    filename = f"payment_{get_datetime().strftime('%Y%m%d_%H%M%S')}.csv"
+    file_naming = make_autoname(f"ASTERIPAY_ASTERIAUPLOAD_{str(getdate().strftime('%d%m%Y'))}.###")
+
+    filename = f"{file_naming}.csv"
 
     saved_file = save_file(filename, buffer.read(), is_private=1, dt=None, dn=None)
 
     local_file_path = frappe.get_site_path() + saved_file.file_url
 
     upload_file(local_file_path)
+    message = "Payment successfully transfer for bellow entries.<br>"
 
-    for row in invoices:
+    for row in payment_process:
         frappe.db.set_value("Payment Entry", row, "h2h_transfered", 1)
+        message += "<ul>"
+        message += f"<li><b>{get_link_to_form('Payment Entry',row)}</b></li>"
+        message += "</ul>"
+
+
+    frappe.msgprint(frappe._(message))
 
     return {
         "file_url": saved_file.file_url,

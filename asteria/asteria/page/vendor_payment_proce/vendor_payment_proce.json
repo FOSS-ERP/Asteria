@@ -4,7 +4,7 @@
  "docstatus": 0,
  "doctype": "Page",
  "idx": 0,
- "modified": "2025-07-02 16:25:40.021665",
+ "modified": "2025-07-31 12:13:27.553341",
  "modified_by": "Administrator",
  "module": "Asteria",
  "name": "vendor-payment-proce",
@@ -12,7 +12,7 @@
  "page_name": "vendor-payment-proce",
  "roles": [
   {
-   "role": "Accounts Manager"
+   "role": "System Manager"
   }
  ],
  "script": null,

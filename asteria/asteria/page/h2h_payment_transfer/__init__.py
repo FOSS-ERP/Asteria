@@ -33,6 +33,7 @@ def get_vendor_payments(document_type):
             From `tabPayment Entry` as pe
             Left Join `tabPayment Entry Reference`  as per ON per.parent = pe.name
             Where pe.docstatus = 0 and pe.h2h_transfered = 0 and per.reference_doctype = '{document_type}'
+            and pe.paid_from_account_currency = 'INR' and pe.paid_to_account_currency = 'INR'
         """, as_dict = 1
     )
     duplicate_row = []

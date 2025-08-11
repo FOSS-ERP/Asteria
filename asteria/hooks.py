@@ -153,9 +153,9 @@ doc_events = {
 	"Expense Claim" : {
 		"validate" : "asteria.asteria.doc_events.expense_claim.validate"
 	},
-	"Job Card": {
-		"on_submit": "asteria.asteria.doc_events.job_card.on_submit"
-	}
+	# "Job Card": {
+	# 	"on_submit": "asteria.asteria.doc_events.job_card.on_submit"
+	# }
 }
 
 # Scheduled Tasks

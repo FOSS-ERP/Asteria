@@ -11,8 +11,10 @@ from io import StringIO
 from frappe.model.naming import make_autoname
 import csv
 import re
+import ast
 import paramiko
 import datetime
+from erpnext.selling.report.address_and_contacts.address_and_contacts import get_party_addresses_and_contact
 
 @frappe.whitelist()
 def get_vendor_payments(document_type):
@@ -33,8 +35,15 @@ def get_vendor_payments(document_type):
             Where pe.docstatus = 0 and pe.h2h_transfered = 0 and per.reference_doctype = '{document_type}'
         """, as_dict = 1
     )
-
+    duplicate_row = []
     for row in results:
+        if row.payment_entry in duplicate_row:
+            row.update({
+                "is_exists" : 1
+            })
+        else:
+            duplicate_row.append(row.payment_entry)
+
         row.update({
             "total_allocated_amount" : frappe.utils.fmt_money(row.total_allocated_amount, currency=row.currency),
         })
@@ -53,212 +62,186 @@ import frappe
 
 @frappe.whitelist()
 def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_date):
-    # Get file path from Accounts Settings
-    file_path = frappe.db.get_value("Accounts Settings", "Accounts Settings", "payment_file")
+    # Header rows
+    header1 = [
+        "Record Identifier", "Payment Indicator", "Unique Cust Ref No", "Vendor / Beneficiary Code",
+        "Name of Beneficiary", "Instrument Amount", "Payment Date", "Cheque Number", "Debit Account No",
+        "Beneficiary Bank A/c No", "Beneficiary Bank IFSC Code", "Beneficiary Bank Name",
+        "Beneficiary Mailing Address 1", "Beneficiary Mailing Address 2", "Beneficiary Mailing Address 3",
+        "Beneficiary City", "Beneficiary Zip", "Debit Narration", "Print Location", "Payable Location",
+        "Fiscal Year", "Company Code", "Email id", "Beneficiary Mobile No", "AADHAR Number"
+    ]
 
-    if "private" in file_path:
-        file_path = frappe.get_site_path() + file_path
-    else:
-        file_path = frappe.get_site_path() + "/public" + file_path
+    header2 = [
+        "Record Identifier", "Unique Cust Ref No", "Invoice No", "Invoice Date",
+        "Gross Amount", "Deductions", "Net Amount"
+    ]
 
-    # Parse invoices
-    if isinstance(invoices, str):
-        invoices = json.loads(invoices)
+    final_payment_data = []
 
-    if not invoices:
-        return frappe._("No invoices provided")
-
-    # Read original CSV
-    with open(file_path, "r", newline="", encoding="utf-8") as f:
-        reader = list(csv.reader(f))
-
-    header_row_index = 3
-    data_start_index = 4
-    j_index = 9
-
-    headers = reader[header_row_index][:j_index] + ["j_value"]
-
-    processed_rows = reader[:header_row_index]  
-    processed_rows.append(headers)
-    
-    date_obj = datetime.datetime.strptime(scheduled_date, "%Y-%m-%d")
-    formatted_date = date_obj.strftime("%B %d, %Y")  
-    processed_rows[1][4] = formatted_date
-
-    grand_totals = []
-    correct_data_only = True
-    for row in range(300):
-        reader.append(["","","","","","","","","",""])
-    payment_process =[]
-    for i, row in enumerate(reader[data_start_index:]):
-        if i >= len(invoices):
-            break
-
-        invoice = invoices[i]
-        if party_bank_account := frappe.db.get_value("Payment Entry", invoice, "party_bank_account"):
-            bank_account = party_bank_account
-        else:
+    for row in ast.literal_eval(invoices):
+        # Fetch Bank Account
+        pe_doc = frappe.get_doc("Payment Entry", row)
+        party_bank_account = frappe.db.get_value("Payment Entry", row, "party_bank_account")
+        if not party_bank_account:
             bank_account = frappe.db.exists("Bank Account", {
-                "party_type": frappe.db.get_value("Payment Entry", invoice, "party_type"),
-                "party": frappe.db.get_value("Payment Entry", invoice, "party"),
+                "party_type": frappe.db.get_value("Payment Entry", row, "party_type"),
+                "party": frappe.db.get_value("Payment Entry", row, "party"),
             })
             if not bank_account:
-                continue
+                frappe.throw(frappe._("Bank Details are not available for {0}".format(
+                    get_link_to_form(frappe.db.get_value("Payment Entry", row, "party_type"), frappe.db.get_value("Payment Entry", row, "party"))
+                )))
+        else:
+            bank_account = pe_doc.party_bank_account
 
         bank_account = frappe.get_doc("Bank Account", bank_account)
-        if not bank_account.branch_code:
-            frappe.throw("Branch Code is missing in Bank Account Details {0}".format(get_link_to_form("Bank Account", bank_account.name)))
+
         if not bank_account.bank_account_no:
-            frappe.throw("Account Number is missing in Bank Account Details {0}".format(get_link_to_form("Bank Account", bank_account.name)))
-        if not bank_account.account_name:
-            frappe.throw("Account Name is missing in Bank Account Details {0}".format(get_link_to_form("Bank Account", bank_account.name)))
+            frappe.throw(f"Bank Account number is not available {get_link_to_form('Bank Account', bank_account.name)}, <br> <strong>Payment Entry : {get_link_to_form('Payment Entry', row)}</strong>")
+        
+        if not bank_account.branch_code:
+            frappe.throw(f"Branch Code is not available {get_link_to_form('Bank Account', bank_account.name)}, <br> <strong>Payment Entry : {get_link_to_form('Payment Entry', row)}</strong>")
+        
+        
 
-        payment_amount = frappe.db.get_value("Payment Entry", invoice, "total_allocated_amount")
+        # First row: "I" type
+        data_row = ["I"]
 
-        if payment_amount < 200000:
-            A = "NFT"
-        elif bank_account.bank == "ICICI":
-            A = "WIB"
+        # Payment Indicator
+        payment_amount = frappe.db.get_value("Payment Entry", row, "total_allocated_amount")
+        if bank_account.bank == "ICICI":
+            data_row.append("I")
+        elif payment_amount <= 200000:
+            data_row.append("R")
         else:
-            A = "RTG"
-            
-        B = "054105000849"
-        C = bank_account.branch_code
-        D = bank_account.bank_account_no
-        E = re.sub(r'[^A-Za-z0-9 ]+', ' ', bank_account.account_name)
-        F = payment_amount
-        G = f"{invoice}"
-        H = G
+            data_row.append("N")
 
-        # Validate and generate j_value
-        try:
-            valid = (
-                A in ["WIB", "NFT", "RTG", "IFC"] and
-                len(str(B)) == 12 and str(B).isdigit() and
-                (
-                    (A == "WIB" and not C) or
-                    (A != "WIB" and len(C) == 11 and C[4] == "0")
-                ) and
-                (
-                    (A == "WIB" and len(D) == 12 and str(D).isdigit()) or
-                    (A != "WIB" and len(D) < 35)
-                ) and
-                isinstance(F, (int, float)) and len(str(round(F, 2))) < 16 and
-                len(G) < 31 and
-                (
-                    (A == "WIB" and 6 <= sum(bool(x) for x in [A, B, C, D, E, F, G]) <= 7) or
-                    (A != "WIB" and sum(bool(x) for x in [A, B, C, D, E, F, G]) == 7)
-                )
-            )
-        except Exception as e:
-            frappe.log_error("Validation error", e)
-            valid = False
-
-        if valid:
-            j_value = "{}|{}|{}|INR|{}|0011|{}|{}|0011|{}|{}|{}^".format(
-                "APW" if A == "WIB" else "APO",
-                A,
-                round(F, 2),
-                B,
-                "ICIC0000011" if A == "WIB" else C,
-                D,
-                E,
-                G,
-                H
-            )
-            grand_totals.append(round(F, 2))
+        # Party info
+        if document_type in ["Purchase Invoice", "Purchase Order"]:
+            party_type = "Supplier"
+            party_group = frappe.db.get_value("Supplier", pe_doc.party, "supplier_group")
         else:
-            j_value = "Please correct data"
-            correct_data_only = False
+            party_type = "Employee"
+            party_group = "Employee"
 
-        updated_row = [
-            A,
-            B,
-            C,
-            D,
-            E,
-            round(F, 2),
-            G,
-            H,
-            "",  # You can keep this or adjust as needed
-            j_value
-        ]
-        processed_rows.append(updated_row)
-        payment_process.append(invoice)
-    
-    if not payment_process:
-        frappe.throw("Please validate the Bank details for selected payment entry")
+        # Address & contact
+        address_contact_details = get_address_contact_details(pe_doc.party, party_type)
+        address = address_contact_details.get("address", {})
+        contact = address_contact_details.get("contact", {})
+        if document_type == "Expense Claim" and not contact:
+            if email_id := frappe.db.get_value("Employee", pe_doc.party, "personal_email"):
+                email_id = email_id
+            elif email_id := frappe.db.get_value("Employee", pe_doc.party, "company_email"):
+                email_id = email_id
+            else:
+                frappe.throw("Email Id is not available for Employee {0}".format(get_link_to_form(
+                    "Employee", pe_doc.party
+                )))
+            if mobile_no := frappe.db.get_value("Employee", pe_doc.party, "cell_number"):
+                mobile_no = mobile_no
+            else:
+                frappe.throw("Mobile No id not available for Employee {0}".format(get_link_to_form(
+                    "Employee", pe_doc.party
+                )))
+            contact = {
+                "mobile_no" : mobile_no,
+                "email_id" : email_id
+            }
 
-
-    # Summary Row - J4
-    sum_total = sum(grand_totals)
-    count_valid = len(grand_totals)
-    e1 = reader[0][4].strip() if len(reader[0]) > 4 else "000000000000"
-    g1 = reader[0][6].strip() if len(reader[0]) > 6 else "REF001"
-    e2 = scheduled_date
-    if not (e1 and len(str(e1)) == 12):
-        frappe.throw("1")
-    if not (str(e1).isdigit()):
-        frappe.throw("2")
-    if not correct_data_only:
-        frappe.throw("3")
-    if not (g1 and len(str(g1)) < 11):
-        frappe.throw("4")
-    if not (len(str(sum_total)) < 16):
-        frappe.throw("5")
-    try:
-        valid_j4 = (
-            e1 and len(str(e1)) == 12 and str(e1).isdigit() and
-            correct_data_only and
-            getdate(e2) >= getdate(today()) and
-            g1 and len(str(g1)) < 11 and
-            len(str(sum_total)) < 16
+        if not contact:
+            frappe.throw(f"Contact Details Not available for {get_link_to_form(party_type, pe_doc.party)}")
+        if not address:
+            frappe.throw(f"Address Details Not available for {get_link_to_form(party_type, pe_doc.party)}")
+        
+        email_id = (
+            address.get("email_id")
+            or contact.get("email_id")
+            or (contact.get("email_ids")[0].email_id if contact.get("email_ids") else None)
         )
-    except Exception as e:
-        frappe.log_error("J4 Validation Error", e)
-        valid_j4 = False
 
-    j4_value = (
-        f"FHR|0011|{e1}|INR|{sum_total}|{count_valid}|{formatdate(e2, 'mm/dd/yyyy')}|{g1}^"
-        if valid_j4 else
-        "Please correct data"
-    )
+        phone = (
+            address.get("phone")
+            or contact.get("mobile_no")
+            or contact.get("phone")
+            or (contact.get("phone_nos")[0].phone if contact.get('phone_nos') else '')
+        )
 
-    processed_rows[header_row_index] = processed_rows[header_row_index][:j_index] + [j4_value]
+        if not email_id:
+            frappe.throw(f"Email ID is not available for {get_link_to_form(party_type, pe_doc.party)}")
+        if not phone:
+            frappe.throw(f"Phone no is not available for {get_link_to_form(party_type, pe_doc.party)}")
+        if not address.get("pincode"):
+            frappe.throw(f"Pincode is missing in address details of supplier {get_link_to_form(party_type, party)}")
+        
+        
+        # Identifier details
+        details = [
+            row, pe_doc.party, pe_doc.party_name, pe_doc.total_allocated_amount,
+            scheduled_date, "", "54405001234", bank_account.bank_account_no,
+            bank_account.branch_code, bank_account.bank or '', email_id, '', '',
+            address.get("city"), address.get("pincode"),'', '','', getdate().year,
+            '', email_id, phone, ''
+        ]
 
-    # Save as CSV
-    output = StringIO()
-    writer = csv.writer(output)
-    writer.writerows(processed_rows)
-    buffer = BytesIO(output.getvalue().encode())
-    buffer.seek(0)
+        data_row += details
 
+        final_payment_data.append(data_row)
+
+        # Second row(s): "A" type for each reference
+        for ad in pe_doc.references:
+            data_row = ["A"]
+
+            if document_type == 'Purchase Order':
+                posting_date = frappe.db.get_value("Purchase Order", ad.reference_name, "transaction_date")
+            elif document_type == 'Purchase Invoice':
+                posting_date = frappe.db.get_value("Purchase Invoice", ad.reference_name, "posting_date")
+            else:
+                posting_date = None
+
+            data_row += [
+                ad.reference_name, ad.reference_name, posting_date,
+                ad.allocated_amount + 100, 100, ad.allocated_amount
+            ]
+            final_payment_data.append(data_row)
+
+
+    # Get the site's public folder path
+    site_path = frappe.get_site_path()
+    public_path = os.path.join(site_path, 'public', 'files')
+    
+    # Create the files directory if it doesn't exist
+    os.makedirs(public_path, exist_ok=True)
+    
     file_naming = make_autoname(f"ASTERIPAY_ASTERIAUPLOAD_{str(getdate().strftime('%d%m%Y'))}.###")
-
     filename = f"{file_naming}.csv"
 
-    saved_file = save_file(filename, buffer.read(), is_private=1, dt=None, dn=None)
+    # Full file path
+    file_path = os.path.join(public_path, filename)
 
-    local_file_path = frappe.get_site_path() + saved_file.file_url
+    # Create and write to the CSV file
+    with open(file_path, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(header1)
+        writer.writerow(header2)
+        for row in final_payment_data:
+            writer.writerow(row)
+    
+    # Create a File document in Frappe
+    file_doc = frappe.get_doc({
+        'doctype': 'File',
+        'file_name': filename,
+        'attached_to_doctype': None,
+        'attached_to_name': None,
+        'folder': 'Home/Attachments',
+        'file_url': f'/files/{filename}',
+        'is_private': 0  
+    })
+    
+    file_doc.insert(ignore_permissions=True)
+    
 
-    upload_file(local_file_path)
-    message = "Payment successfully transfer for bellow entries.<br>"
-
-    for row in payment_process:
-        frappe.db.set_value("Payment Entry", row, "h2h_transfered", 1)
-        message += "<ul>"
-        message += f"<li><b>{get_link_to_form('Payment Entry',row)}</b></li>"
-        message += "</ul>"
-
-
-    frappe.msgprint(frappe._(message))
-
-    return {
-        "file_url": saved_file.file_url,
-        "file_name": saved_file.file_name
-    }
-
-
+    frappe.msgprint(f"CSV file created successfully at {file_path}")
 
 def connect_sftp():
     cred_doc = frappe.get_doc("H2H Settings", "H2H Settings")
@@ -307,3 +290,32 @@ def download_file(remote_file_name, local_download_dir):
         sftp.close()
         transport.close()
 
+
+def get_address_contact_details(party, party_type):
+    address = frappe.db.sql(
+        f""" 
+            Select ad.name
+            From `tabAddress` as ad
+            Left join `tabDynamic Link` as dl ON dl.parent=ad.name
+            Where dl.link_name = "{party}" and dl.link_doctype = "{party_type}"
+            LIMIT 1
+        """, as_dict=1
+    )
+    if address:
+        address = frappe.get_doc("Address", address[0].name)
+    contact = frappe.db.sql(
+        f"""
+            Select co.name
+            From `tabContact` as co
+            Left Join `tabDynamic Link` as dl ON dl.parent=co.name
+            Where dl.link_name = "{party}" and dl.link_doctype = "{party_type}"
+            LIMIT 1
+        """, as_dict=1
+    )
+    if contact:
+        contact = frappe.get_doc("Contact", contact[0].name)
+
+    return {
+        "address" : address,
+        "contact" : contact
+    }

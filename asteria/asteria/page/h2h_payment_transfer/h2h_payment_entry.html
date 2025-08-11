@@ -29,9 +29,15 @@
             {% for row in data %}
             <tr>
                 <td>
+                    {% if not row.is_exists %}
                     <input type="checkbox" class="purchase_invoice_no" data-invoice="{{ row.payment_entry }}">
+                    {% endif %}
                 </td>
-                <td><a href="/desk/Form/Payment Entry/{{ row.payment_entry }}">{{ row.payment_entry }}</a></td>
+                <td>
+                    {% if not row.is_exists %}
+                    <a href="/desk/Form/Payment Entry/{{ row.payment_entry }}">{{ row.payment_entry }}</a>
+                    {% endif %}
+                </td>
                 <td><a href="/desk/Form/{{ row.reference_doctype }}/{{ row.reference_name }}">{{ row.reference_name }}</a></td>
                 <td>{{ row.party_type }}</td>
                 <td width="30%"><a href="/desk/Form/{{row.party_type}}/{{ row.party }}">{{ row.party_name }}</a></td>

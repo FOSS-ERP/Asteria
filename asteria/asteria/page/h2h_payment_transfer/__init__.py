@@ -268,8 +268,8 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
     h2h_log.insert(ignore_permissions=True)
     
     file_doc.insert(ignore_permissions=True)
+    upload_file(file_path)
     
-
     frappe.msgprint(f"CSV file created successfully at {file_path}")
 
 def connect_sftp():

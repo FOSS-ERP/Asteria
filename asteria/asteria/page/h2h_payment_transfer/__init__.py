@@ -79,10 +79,12 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
     ]
 
     final_payment_data = []
-
+    h2h_log = frappe.new_doc("H2H Log")
+    total_paid_amount = 0
     for row in ast.literal_eval(invoices):
         # Fetch Bank Account
         pe_doc = frappe.get_doc("Payment Entry", row)
+        total_paid_amount += pe_doc.paid_amount
         party_bank_account = frappe.db.get_value("Payment Entry", row, "party_bank_account")
         if not party_bank_account:
             bank_account = frappe.db.exists("Bank Account", {
@@ -110,7 +112,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
         data_row = ["I"]
 
         # Payment Indicator
-        payment_amount = frappe.db.get_value("Payment Entry", row, "total_allocated_amount")
+        payment_amount = frappe.db.get_value("Payment Entry", row, "paid_amount")
         if bank_account.bank == "ICICI":
             data_row.append("I")
         elif payment_amount <= 200000:
@@ -175,11 +177,11 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
         if not address.get("pincode"):
             frappe.throw(f"Pincode is missing in address details of supplier {get_link_to_form(party_type, party)}")
         
-        
+
         # Identifier details
         details = [
-            row, pe_doc.party, pe_doc.party_name, pe_doc.total_allocated_amount,
-            scheduled_date, "", "54405001234", bank_account.bank_account_no,
+            row, pe_doc.party, pe_doc.party_name, pe_doc.paid_amount,
+            scheduled_date, "", str("054405001234"), bank_account.bank_account_no,
             bank_account.branch_code, bank_account.bank or '', email_id, '', '',
             address.get("city"), address.get("pincode"),'', '','', getdate().year,
             '', email_id, phone, ''
@@ -188,7 +190,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
         data_row += details
 
         final_payment_data.append(data_row)
-
+        
         # Second row(s): "A" type for each reference
         for ad in pe_doc.references:
             data_row = ["A"]
@@ -199,10 +201,17 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
                 posting_date = frappe.db.get_value("Purchase Invoice", ad.reference_name, "posting_date")
             else:
                 posting_date = None
+            deduction = 0
+
+            if (document_type == "Purchase Order" or document_type == 'Purchase Invoice'):
+                purchase_doc = frappe.get_doc(document_type, ad.reference_name)
+                for tax in purchase_doc.taxes:
+                    if tax.get("is_tax_withholding_account"):
+                        deduction = tax.tax_amount
 
             data_row += [
                 ad.reference_name, ad.reference_name, posting_date,
-                ad.allocated_amount + 100, 100, ad.allocated_amount
+                ad.allocated_amount + deduction, deduction, ad.allocated_amount
             ]
             final_payment_data.append(data_row)
 
@@ -238,6 +247,25 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
         'file_url': f'/files/{filename}',
         'is_private': 0  
     })
+
+    h2h_log.transferred_csv_file = f"/files/{filename}"
+    h2h_log.total_no_of_payments = len(final_payment_data) - len(ast.literal_eval(invoices))
+    h2h_log.total_paid_amount = pe_doc.paid_amount
+    h2h_log.log_type = "Upload"
+    for row in final_payment_data:
+        if(row[0] == 'A'):
+            continue
+        pedoc = frappe.get_doc("Payment Entry", row[5])
+        for d in pedoc.references:
+            h2h_log.append("vendor_payment_processor", {
+                "payment_entry" : pedoc.name,
+                "document_type" : d.reference_doctype,
+                "document" : d.reference_name,
+                "due_date" : d.get("due_date"),
+                "status" : "File Created"
+            })  
+        
+    h2h_log.insert(ignore_permissions=True)
     
     file_doc.insert(ignore_permissions=True)
     
@@ -264,8 +292,8 @@ def connect_sftp():
         look_for_keys=False
     )
     sftp = client.open_sftp()
+    
     return sftp, client
-    return sftp, transport
 
 
 def upload_file(local_file_path, remote_file_name=None):

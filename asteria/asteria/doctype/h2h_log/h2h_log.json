@@ -6,7 +6,15 @@
  "engine": "InnoDB",
  "field_order": [
   "posting_date",
-  "user"
+  "user",
+  "transferred_csv_file",
+  "icici_return_csv_file",
+  "column_break_ovrx",
+  "total_paid_amount",
+  "total_no_of_payments",
+  "log_type",
+  "section_break_cavl",
+  "vendor_payment_processor"
  ],
  "fields": [
   {
@@ -21,12 +29,52 @@
    "label": "User",
    "options": "User",
    "read_only": 1
+  },
+  {
+   "fieldname": "transferred_csv_file",
+   "fieldtype": "Attach",
+   "label": "Transferred CSV file"
+  },
+  {
+   "fieldname": "icici_return_csv_file",
+   "fieldtype": "Attach",
+   "label": "ICICI Return CSV file"
+  },
+  {
+   "fieldname": "total_paid_amount",
+   "fieldtype": "Currency",
+   "label": "Total Paid Amount"
+  },
+  {
+   "fieldname": "total_no_of_payments",
+   "fieldtype": "Currency",
+   "label": "Total No of Payments"
+  },
+  {
+   "fieldname": "vendor_payment_processor",
+   "fieldtype": "Table",
+   "label": "Vendor Payment Processor",
+   "options": "H2H Log Details"
+  },
+  {
+   "fieldname": "column_break_ovrx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_cavl",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "log_type",
+   "fieldtype": "Select",
+   "label": "Log Type",
+   "options": "Upload\nReturn"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-31 17:56:29.373841",
+ "modified": "2025-08-16 11:34:11.433196",
  "modified_by": "Administrator",
  "module": "Asteria",
  "name": "H2H Log",

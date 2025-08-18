@@ -201,8 +201,8 @@ def create_payment_entry(reference_doctype, reference_name, bank_account, submit
 			'party' : supplier
 		}, "name")
 		if party_bank_account:
-			payment_entry.party_bank_account = bank_account
-	
+			payment_entry.party_bank_account = party_bank_account
+
 	payment_entry.insert(ignore_permissions=True, ignore_mandatory=True)
 	frappe.db.commit()
 

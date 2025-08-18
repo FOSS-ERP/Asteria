@@ -61,6 +61,22 @@ def setup_custom_fields():
                 "fieldtype" : "Float",
                 "insert_after" : "is_travel_type",
             }
+        ],
+        "Employee" : [
+            {
+                "label" : "City",
+                "fieldname" : "city",
+                "fieldtype" : "Data",
+                "insert_after" : "cell_number",
+                "reqd" :  1
+            },
+            {
+                "label" : "Pincode",
+                "fieldname" : "pincode",
+                "fieldtype" : "Data",
+                "insert_after" : "city",
+                "reqd" : 1
+            }
         ]
     }
     

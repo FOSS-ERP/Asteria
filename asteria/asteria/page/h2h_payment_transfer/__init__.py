@@ -5,7 +5,7 @@ from openpyxl import load_workbook
 import os
 import json
 from frappe.utils.file_manager import save_file
-from frappe.utils import get_datetime, get_link_to_form
+from frappe.utils import get_datetime, get_link_to_form, getdate, today, formatdate
 from io import BytesIO
 from io import StringIO
 from frappe.model.naming import make_autoname
@@ -51,15 +51,6 @@ def get_vendor_payments(document_type):
 
     return {"data" : results}
 
-
-
-
-import csv
-import json
-from io import StringIO, BytesIO
-from frappe.utils import get_datetime, getdate, today, formatdate
-from frappe.utils.file_manager import save_file
-import frappe
 
 @frappe.whitelist()
 def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_date):
@@ -149,11 +140,26 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
                 )))
             contact = {
                 "mobile_no" : mobile_no,
-                "email_id" : email_id
+                "email_id" : email_id 
             }
 
         if not contact:
             frappe.throw(f"Contact Details Not available for {get_link_to_form(party_type, pe_doc.party)}")
+
+        if not address and document_type == "Expense Claim":
+            city = frappe.db.get_value("Employee", pe_doc.party, "city")
+            if not city:
+                frappe.throw(f"City is not updated in Employee Master <b>{pe_doc.party}</b>")
+            pincode = frappe.db.get_value("Employee", pe_doc.party, "pincode")
+            if not pincode:
+                frappe.throw(f"Pincode is not updated in Employee Master <b>{pe_doc.party}</b>")
+            
+            address = {
+                "pincode" : pincode,
+                "city" : city,
+                "email_id" : contact.get("email_id") or email_id,
+                "mobile_no" : contact.get("mobile_no") or mobile_no
+            }
         if not address:
             frappe.throw(f"Address Details Not available for {get_link_to_form(party_type, pe_doc.party)}")
         
@@ -268,7 +274,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
     h2h_log.insert(ignore_permissions=True)
     
     file_doc.insert(ignore_permissions=True)
-    upload_file(file_path)
+    # upload_file(file_path)
     
     frappe.msgprint(f"CSV file created successfully at {file_path}")
 

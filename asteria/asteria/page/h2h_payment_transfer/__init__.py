@@ -261,7 +261,8 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
     for row in final_payment_data:
         if(row[0] == 'A'):
             continue
-        pedoc = frappe.get_doc("Payment Entry", row[5])
+
+        pedoc = frappe.get_doc("Payment Entry", row[2])
         for d in pedoc.references:
             h2h_log.append("vendor_payment_processor", {
                 "payment_entry" : pedoc.name,
@@ -274,7 +275,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
     h2h_log.insert(ignore_permissions=True)
     
     file_doc.insert(ignore_permissions=True)
-    # upload_file(file_path)
+    upload_file(file_path)
     
     frappe.msgprint(f"CSV file created successfully at {file_path}")
 

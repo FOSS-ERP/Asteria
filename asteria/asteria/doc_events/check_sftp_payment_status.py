@@ -61,7 +61,7 @@ def check_status():
                             h2h_log.append('vendor_payment_processor', {
                                 "payment_entry" : payment_entry,
                                 "document_type" : payment_doc.party_type,
-                                "document" : payment_entry.party,
+                                "document" : payment_doc.party,
                                 "status" : "Successful" if status == 'Paid' else "Failed"
                             })
                             

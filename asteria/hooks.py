@@ -153,6 +153,9 @@ doc_events = {
 	"Expense Claim" : {
 		"validate" : "asteria.asteria.doc_events.expense_claim.validate"
 	},
+	"Employee Advance" : { 
+		"validate" : "asteria.asteria.doc_events.employee_advance.validate"
+	}
 	# "Job Card": {
 	# 	"on_submit": "asteria.asteria.doc_events.job_card.on_submit"
 	# }

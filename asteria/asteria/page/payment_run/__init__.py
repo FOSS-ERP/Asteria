@@ -249,6 +249,7 @@ def get_payment_entry_for_employee(dt, dn, party_amount=None, bank_account=None,
 	pe.letter_head = doc.get("letter_head")
 	pe.paid_from = bank.account
 	pe.paid_to = party_account
+	pe.project = doc.project
 	pe.paid_from_account_currency = bank.account_currency
 	pe.paid_to_account_currency = party_account_currency
 	pe.paid_amount = paid_amount

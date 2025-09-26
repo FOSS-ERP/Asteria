@@ -13,7 +13,7 @@ import csv
 import re
 import ast
 import paramiko
-import datetime
+from datetime import datetime
 from erpnext.selling.report.address_and_contacts.address_and_contacts import get_party_addresses_and_contact
 
 @frappe.whitelist()
@@ -54,6 +54,7 @@ def get_vendor_payments(document_type):
 
 @frappe.whitelist()
 def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_date):
+    scheduled_date = datetime.strptime(scheduled_date, "%Y-%m-%d").strftime("%d/%m/%Y")
     # Header rows
     header1 = [
         "Record Identifier", "Payment Indicator", "Unique Cust Ref No", "Vendor / Beneficiary Code",
@@ -107,9 +108,9 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
         if bank_account.bank == "ICICI":
             data_row.append("I")
         elif payment_amount <= 200000:
-            data_row.append("R")
-        else:
             data_row.append("N")
+        else:
+            data_row.append("R")
 
         # Party info
         if document_type in ["Purchase Invoice", "Purchase Order"]:
@@ -187,7 +188,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
         # Identifier details
         details = [
             row, pe_doc.party, pe_doc.party_name, pe_doc.paid_amount,
-            scheduled_date, "", str("054405001234"), bank_account.bank_account_no,
+            scheduled_date, "", str("054105000849"), bank_account.bank_account_no,
             bank_account.branch_code, bank_account.bank or '', email_id, '', '',
             address.get("city"), address.get("pincode"),'', '','', getdate().year,
             '', email_id, phone, ''
@@ -198,6 +199,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
         final_payment_data.append(data_row)
         
         # Second row(s): "A" type for each reference
+        frappe.db.set_value("Payment Entry", pe_doc.name, "h2h_transfered", 1)
         for ad in pe_doc.references:
             data_row = ["A"]
 
@@ -206,7 +208,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
             elif document_type == 'Purchase Invoice':
                 posting_date = frappe.db.get_value("Purchase Invoice", ad.reference_name, "posting_date")
             else:
-                posting_date = None
+                posting_date = frappe.db.get_value("Expense Claim", ad.reference_name, "posting_date")
             deduction = 0
 
             if (document_type == "Purchase Order" or document_type == 'Purchase Invoice'):
@@ -216,7 +218,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
                         deduction = tax.tax_amount
 
             data_row += [
-                ad.reference_name, ad.reference_name, posting_date,
+                ad.reference_name, ad.reference_name, getdate(posting_date).strftime("%d/%m/%Y"),
                 ad.allocated_amount + deduction, deduction, ad.allocated_amount
             ]
             final_payment_data.append(data_row)
@@ -229,7 +231,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
     # Create the files directory if it doesn't exist
     os.makedirs(public_path, exist_ok=True)
     
-    file_naming = make_autoname(f"ASTERIPAY_ASTERIAUPLOAD_{str(getdate().strftime('%d%m%Y'))}.###")
+    file_naming = make_autoname(f"ASTERIAPAY_ASTERIAUPLOAD_{str(getdate().strftime('%d%m%Y'))}.###")
     filename = f"{file_naming}.csv"
 
     # Full file path
@@ -237,7 +239,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
 
     # Create and write to the CSV file
     with open(file_path, mode='w', newline='') as file:
-        writer = csv.writer(file)
+        writer = csv.writer(file, delimiter='|')
         writer.writerow(header1)
         writer.writerow(header2)
         for row in final_payment_data:
@@ -279,52 +281,59 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
     
     frappe.msgprint(f"CSV file created successfully at {file_path}")
 
+import os
+import frappe
+import paramiko
+
+UPLOAD_PATH = "/In"
+DOWNLOAD_PATH = "/Out"   # ICICI usually provides /Out for downloads
+
 def connect_sftp():
     cred_doc = frappe.get_doc("H2H Settings", "H2H Settings")
-    SFTP_HOST = cred_doc.public_ip
-    SFTP_PORT = cred_doc.port
-    SFTP_PASSWORD = cred_doc.get_password("password")
+    SFTP_HOST = cred_doc.public_ip or "host2host.icicibank.com"
+    SFTP_PORT = int(cred_doc.port or 4446)
     SFTP_USERNAME = cred_doc.username
 
-
-    """Establish SFTP connection and return sftp client"""
+    """Establish SFTP connection and return sftp + ssh client"""
     client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # <-- disables host key checking
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    # Load private key
+    private_key = paramiko.RSAKey.from_private_key_file("/home/icicisftp/.ssh/id_rsa")
+
     client.connect(
         hostname=SFTP_HOST,
         port=SFTP_PORT,
         username=SFTP_USERNAME,
-        password=SFTP_PASSWORD,
+        pkey=private_key,       # <-- Use key, not password
         allow_agent=False,
         look_for_keys=False
     )
     sftp = client.open_sftp()
-    
     return sftp, client
 
 
 def upload_file(local_file_path, remote_file_name=None):
     sftp, client = connect_sftp()
-    UPLOAD_PATH = "/In"
     try:
         remote_path = f"{UPLOAD_PATH}/{remote_file_name or os.path.basename(local_file_path)}"
         sftp.put(local_file_path, remote_path)
-        frappe.msgprint(f"Uploaded file to {remote_path}")
+        frappe.msgprint(f"✅ Uploaded file to {remote_path}")
     finally:
         sftp.close()
         client.close()
 
+
 def download_file(remote_file_name, local_download_dir):
-    """Download a file from the SFTP server"""
-    sftp, transport = connect_sftp()
+    sftp, client = connect_sftp()
     try:
         local_path = os.path.join(local_download_dir, remote_file_name)
         remote_path = f"{DOWNLOAD_PATH}/{remote_file_name}"
         sftp.get(remote_path, local_path)
-        frappe.msgprint(f"Downloaded file to {local_path}")
+        frappe.msgprint(f"✅ Downloaded file to {local_path}")
     finally:
         sftp.close()
-        transport.close()
+        client.close()
 
 
 def get_address_contact_details(party, party_type):

@@ -12,7 +12,8 @@
   "status",
   "column_break_tkuy",
   "posting_date",
-  "due_date"
+  "due_date",
+  "amount"
  ],
  "fields": [
   {
@@ -57,19 +58,23 @@
    "fieldtype": "Dynamic Link",
    "label": "Document",
    "options": "document_type"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount",
+   "read_only": 1
   }
  ],
- "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-08-18 13:49:33.481531",
+ "modified": "2025-09-26 09:51:49.850259",
  "modified_by": "Administrator",
  "module": "Asteria",
  "name": "H2H Log Details",
  "owner": "Administrator",
  "permissions": [],
- "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": []

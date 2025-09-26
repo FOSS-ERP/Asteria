@@ -13,7 +13,6 @@ frappe.pages['h2h-payment-transfer'].on_page_load = function(wrapper) {
 		default: "Purchase Order",
 		onchange:()=>{
 			frappe.h2h_payment_transfer.run(page);
-			toggle_date_filters(page)
 		}
 	});
 

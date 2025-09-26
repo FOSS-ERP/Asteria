@@ -22,11 +22,7 @@ def execute_alert():
         
         if row.workflow_state == 'Waiting for Expense Approver':
             doc = frappe.get_doc("Expense Claim", row.name)
-            notify_finance_approver(doc)
-
-        if row.approval_status == 'Expense Manager Approved':
-            doc = frappe.get_doc("Expense Claim", row.name)
-            notify_finance_approver(doc)
+            notify_second_level_approver(doc)
 
 
 def notify_approver(doc):
@@ -104,7 +100,7 @@ def notify_approver(doc):
 import frappe
 from frappe.utils import get_link_to_form, getdate
 
-def notify_finance_approver(doc):
+def notify_second_level_approver(doc):
    
     expense_approver = frappe.db.get_value("Employee", doc.employee, "expense_approver")
     if expense_approver:
@@ -436,7 +432,7 @@ def validate(self, method):
         subject = "Expense claim Rejection"
         approver_email = frappe.db.get_value("Employee", self.employee, "user_id")
         frappe.sendmail(
-                recipients="viral@fosserp.com",
+                recipients=approver_email,
                 subject=subject,
                 message=message
         )

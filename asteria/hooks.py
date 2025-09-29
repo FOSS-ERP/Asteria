@@ -168,6 +168,9 @@ scheduler_events = {
 	"cron": {
 		"0 6 * * *" : [
 			"asteria.asteria.doc_events.expense_claim.execute_alert"
+		],
+		"0 * * * *" : [
+			"asteria.asteria.doc_events.check_sftp_payment_status.check_status"
 		]
 	},
 }

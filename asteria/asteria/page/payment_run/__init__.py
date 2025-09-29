@@ -173,6 +173,9 @@ def create_payment_entry(reference_doctype, reference_name, bank_account, submit
 			"remarks": "Payment Entry against {} {} via Payment Run".format(
 				reference_doctype, reference_name
 			),
+			"project" : ref_doc.project,
+			"business_unit" : ref_doc.business_unit,
+			"project" : ref_doc.project
 		}
 	)
 
@@ -249,6 +252,8 @@ def get_payment_entry_for_employee(dt, dn, party_amount=None, bank_account=None,
 	pe.letter_head = doc.get("letter_head")
 	pe.paid_from = bank.account
 	pe.paid_to = party_account
+	pe.business_unit = doc.business_unit
+	pe.cost_center = doc.cost_center
 	pe.project = doc.project
 	pe.paid_from_account_currency = bank.account_currency
 	pe.paid_to_account_currency = party_account_currency

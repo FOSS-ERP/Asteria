@@ -173,9 +173,7 @@ def create_payment_entry(reference_doctype, reference_name, bank_account, submit
 			"remarks": "Payment Entry against {} {} via Payment Run".format(
 				reference_doctype, reference_name
 			),
-			"project" : ref_doc.project,
-			"business_unit" : ref_doc.business_unit,
-			"project" : ref_doc.project
+			"business_unit" : ref_doc.get("business_unit"),
 		}
 	)
 

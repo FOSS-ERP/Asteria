@@ -155,10 +155,10 @@ doc_events = {
 	},
 	"Employee Advance" : { 
 		"validate" : "asteria.asteria.doc_events.employee_advance.validate"
+	},
+	"Job Card": {
+		"on_submit": "asteria.asteria.doc_events.job_card.on_submit"
 	}
-	# "Job Card": {
-	# 	"on_submit": "asteria.asteria.doc_events.job_card.on_submit"
-	# }
 }
 
 # Scheduled Tasks

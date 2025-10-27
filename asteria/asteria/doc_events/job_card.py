@@ -23,6 +23,7 @@ def on_submit(self, method):
             se.cost_center = work_order.custom_cost_center
             se.project = work_order.project
             se.business_unit = work_order.custom_business_unit
+            se.create_from_job_card = 1
 
             for row in se.items:
                 row.cost_center = work_order.custom_cost_center

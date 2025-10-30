@@ -14,8 +14,11 @@ def on_submit(self, method):
         ]
 
         final_opration = max(operation_sequence_id)
-
+        
         if self.sequence_id == final_opration:
+            # check if any workflow is active
+            workflow = frappe.db.get_value("Workflow", { "is_active" : 1 , "document_type" : "Stock Entry"}, "name")
+
             fg_warehouse = frappe.db.get_value("Work Order", self.work_order, "fg_warehouse")
             stock_entry = make_stock_entry(self.work_order, "Manufacture", target_warehouse = fg_warehouse)
             se = frappe.get_doc(stock_entry)
@@ -24,6 +27,7 @@ def on_submit(self, method):
             se.project = work_order.project
             se.business_unit = work_order.custom_business_unit
             se.create_from_job_card = 1
+ 
 
             for row in se.items:
                 row.cost_center = work_order.custom_cost_center
@@ -32,6 +36,11 @@ def on_submit(self, method):
 
             se.insert(ignore_mandatory = True)
 
+            if workflow:
+                doc = frappe.get_doc("Workflow", workflow)
+                se.workflow_state = doc.transitions[0].get("next_state")
+                se.flags.ignore_permissions = True
+                se.flags.ignore_mandatory = True
+                se.save()
+
             frappe.msgprint("Stock Entry is successfully created. {0}".format(frappe.utils.get_link_to_form("Stock Entry", se.name)))
-
-

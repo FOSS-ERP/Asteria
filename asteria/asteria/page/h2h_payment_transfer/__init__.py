@@ -288,24 +288,26 @@ import paramiko
 UPLOAD_PATH = "/In"
 DOWNLOAD_PATH = "/Out"   # ICICI usually provides /Out for downloads
 
+import frappe
+import paramiko
+
 def connect_sftp():
     cred_doc = frappe.get_doc("H2H Settings", "H2H Settings")
     SFTP_HOST = cred_doc.public_ip or "host2host.icicibank.com"
     SFTP_PORT = int(cred_doc.port or 4446)
     SFTP_USERNAME = cred_doc.username
+    SFTP_PASSWORD = cred_doc.get_password('password')  # assuming 'password' field is encrypted in Frappe
 
     """Establish SFTP connection and return sftp + ssh client"""
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    # Load private key
-    private_key = paramiko.RSAKey.from_private_key_file("/home/icicisftp/.ssh/id_rsa")
-
+    # Connect using username and password
     client.connect(
         hostname=SFTP_HOST,
         port=SFTP_PORT,
         username=SFTP_USERNAME,
-        pkey=private_key,       # <-- Use key, not password
+        password=SFTP_PASSWORD,
         allow_agent=False,
         look_for_keys=False
     )

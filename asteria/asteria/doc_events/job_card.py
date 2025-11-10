@@ -3,19 +3,18 @@ from erpnext.manufacturing.doctype.work_order.work_order import make_stock_entry
 
 def on_submit(self, method):
     if self.work_order:
-        operation_sequence_id = frappe.db.sql(f"""
-                Select sequence_id
-                From `tabWork Order Operation`
-                Where parent = '{self.work_order}'
-        """, as_dict=1)
 
-        operation_sequence_id = [
-            row.sequence_id for row in operation_sequence_id
-        ]
+        job_cards = frappe.db.get_list('Job Card',
+                                            filters={
+                                                'work_order': self.work_order
+                                            },
+                                            fields=['name'],
+                                            order_by='name desc',
+                                        )
+        if not job_cards:
+            return
 
-        final_opration = max(operation_sequence_id)
-        
-        if self.sequence_id == final_opration:
+        if self.name == job_cards[0].get("name"):
             # check if any workflow is active
             workflow = frappe.db.get_value("Workflow", { "is_active" : 1 , "document_type" : "Stock Entry"}, "name")
 

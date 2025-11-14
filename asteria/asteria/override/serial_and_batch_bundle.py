@@ -152,7 +152,8 @@ def validate(self, method):
 					message = _(f"Row #{idx[0].idx}: Selected Serial No '{frappe.bold(get_link_to_form('Serial No', row.serial_no))}' is not from previous material transfer entries.<br>")
 					message += _(f"Serial No should be from related work order process {frappe.bold(get_link_to_form('Work Order', work_order))}")
 					message += _(f"<br><br>To update the correct serial no, use <b>'Add Serial / Batch No'</b> button.")
-					frappe.throw(message)
+					if frappe.db.get_single_value("Stock Settings", "enable_validation_serial_no"):
+						frappe.throw(message)
 
 
 def not_validate_finished_item(self, voucher_detail_no):

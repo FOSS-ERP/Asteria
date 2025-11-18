@@ -138,7 +138,7 @@ def validate(self, method):
 			conditions = build_conditions(self, material_transfer_entries)
 			
 			# SQL to fetch serial numbers and batch numbers
-			serial_no_data = get_serial_no_data(conditions)
+			serial_no_data = get_serial_no_data(conditions, material_transfer_entries)
 			batch_no_data = get_batch_no_data(conditions)
 
 			# Prepare the lists for validation
@@ -181,15 +181,34 @@ def build_conditions(self, material_transfer_entries):
 
 	return conditions
 
-def get_serial_no_data(conditions):
+def get_serial_no_data(conditions, material_transfer_entries):
 	"""Fetch active serial numbers based on conditions."""
-	return frappe.db.sql(f"""
+	serial_no =  frappe.db.sql(f"""
 		SELECT sbe.serial_no, serial.warehouse, serial.batch_no
 		FROM `tabSerial and Batch Bundle` AS sbb
 		LEFT JOIN `tabSerial and Batch Entry` AS sbe ON sbe.parent = sbb.name
 		LEFT JOIN `tabSerial No` AS serial ON serial.name = sbe.serial_no
 		WHERE 1=1 AND serial.status="Active" {conditions}
 	""", as_dict=1)
+	
+	str_serial_no_data = frappe.db.sql(f""" 
+					Select sed.serial_no
+					From `tabStock Entry Detail` as sed
+					Where sed.parent in ({0})
+	""".format(
+		", ".join([f'"{entry}"' for entry in material_transfer_entries])
+	),as_dict=1)
+
+	for row in str_serial_no_data:
+		serial_nos = row.split("\n")
+		for s in serial_nos:
+			serial_no.append({
+				"serial_no" : s
+			})
+
+	return serial_no
+
+
 
 def get_batch_no_data(conditions):
 	"""Fetch batch numbers with remaining quantity based on conditions."""

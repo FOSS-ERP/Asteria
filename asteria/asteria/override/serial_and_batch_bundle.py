@@ -198,13 +198,13 @@ def get_serial_no_data(conditions, material_transfer_entries):
 	""".format(
 		", ".join([f'"{entry}"' for entry in material_transfer_entries])
 	),as_dict=1)
-
-	for row in str_serial_no_data:
-		serial_nos = row.split("\n")
-		for s in serial_nos:
-			serial_no.append({
-				"serial_no" : s
-			})
+	if str_serial_no_data:
+		for row in str_serial_no_data:
+			serial_nos = row.serial_no.split("\n")
+			for s in serial_nos:
+				serial_no.append({
+					"serial_no" : s
+				})
 
 	return serial_no
 

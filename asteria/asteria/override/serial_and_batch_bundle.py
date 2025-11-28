@@ -142,14 +142,14 @@ def validate(self, method):
 			batch_no_data = get_batch_no_data(conditions)
 
 			# Prepare the lists for validation
-			pre_serial_no = [row.serial_no for row in serial_no_data]
+			pre_serial_no = [row.get("serial_no") for row in serial_no_data]
 			pre_batch_no = [row.batch_no for row in batch_no_data]
 
 			# Validate each entry in self.entries
 			for row in self.entries:
-				if row.serial_no and row.serial_no not in pre_serial_no:
+				if row.get("serial_no") and row.get("serial_no") not in pre_serial_no:
 					idx = frappe.db.sql(f"Select idx From `tabStock Entry Detail` Where name = '{self.voucher_detail_no}'", as_dict=1)
-					message = _(f"Row #{idx[0].idx}: Selected Serial No '{frappe.bold(get_link_to_form('Serial No', row.serial_no))}' is not from previous material transfer entries.<br>")
+					message = _(f"Row #{idx[0].idx}: Selected Serial No '{frappe.bold(get_link_to_form('Serial No', row.get('serial_no')))}' is not from previous material transfer entries.<br>")
 					message += _(f"Serial No should be from related work order process {frappe.bold(get_link_to_form('Work Order', work_order))}")
 					message += _(f"<br><br>To update the correct serial no, use <b>'Add Serial / Batch No'</b> button.")
 					if frappe.db.get_single_value("Stock Settings", "enable_validation_serial_no"):
@@ -200,7 +200,9 @@ def get_serial_no_data(conditions, material_transfer_entries):
 	),as_dict=1)
 	if str_serial_no_data:
 		for row in str_serial_no_data:
-			serial_nos = row.serial_no.split("\n")
+			if not row.get("serial_no"):
+				continue
+			serial_nos = row.get("serial_no").split("\n")
 			for s in serial_nos:
 				serial_no.append({
 					"serial_no" : s

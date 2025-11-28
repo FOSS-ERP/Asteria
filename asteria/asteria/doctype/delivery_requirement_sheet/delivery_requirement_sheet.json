@@ -1,0 +1,808 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "DRS/AA/24-.####.",
+ "creation": "2024-08-21 15:55:17.348738",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "system_delivery_configuration_section",
+  "general_information_section",
+  "customer_name",
+  "order_quantity",
+  "revision",
+  "original_reference",
+  "column_break_tx6i",
+  "estimated_delivery_date",
+  "is_active",
+  "customer_id",
+  "sales_order_number",
+  "previous_reference",
+  "bd_section_section",
+  "has_the_demo_been_given_to_the_customer",
+  "drs_use_case",
+  "column_break_vsm3",
+  "recorded_video_link",
+  "uin_requirement",
+  "2_system_requirement_section",
+  "product",
+  "ground_control_station",
+  "payload_1",
+  "payload_2",
+  "range",
+  "battery_mah",
+  "column_break_nq453",
+  "bis_label",
+  "manuals_released_to_cms",
+  "english_user_manulas",
+  "hindi_user_manuals",
+  "flight_logbook",
+  "battery_logbook",
+  "maintenance_logbook",
+  "column_break_qvubg",
+  "ground_control_station_product_specification",
+  "accessories",
+  "gdt_options",
+  "others",
+  "on_board_recording",
+  "section_break_m95k3",
+  "3_quantity",
+  "manufacturing_bom_details_section",
+  "air_vehicle",
+  "ground_data_terminal",
+  "payload",
+  "night_payload",
+  "final_sales_bom",
+  "column_break_lfg8r",
+  "customer_cms_sheet",
+  "packaging_1",
+  "packaging_2",
+  "internal_packing_checklist",
+  "customer_packing_checklist",
+  "other",
+  "4_sytem_id_information_section",
+  "system_ids",
+  "51_laptop_and_mcs_settings_section",
+  "laptop_ip_address",
+  "hotspot_details",
+  "subnet",
+  "default_gateway",
+  "column_break_jlpga",
+  "username",
+  "admin_password",
+  "user_password",
+  "52_payload_settings_section",
+  "payload_ip_address",
+  "column_break_vir2w",
+  "subnet_info",
+  "53_air_radio_settings_section",
+  "air_radio_ip_address",
+  "network_id",
+  "encryption_password",
+  "login_username",
+  "column_break_kp9ow",
+  "login_password",
+  "subnet_information",
+  "frequency",
+  "54_gdt_radio_settings_section",
+  "gdt_radio_ip_address",
+  "network_id_details",
+  "encryption_password_details",
+  "column_break_m9k7w",
+  "login_user_2",
+  "login_password_2",
+  "subnet__details",
+  "frequency_2",
+  "55_mcs_configuration_details_section",
+  "mcs_version",
+  "attach_v318t",
+  "column_break_uozm4",
+  "additional_features",
+  "56_firmware_and_parameter_details",
+  "asteria_autopilot_firmware_version",
+  "radio_firmware",
+  "attach_tle4t",
+  "av_256_bits",
+  "gdt",
+  "gdt_256_bits",
+  "column_break_bt5sp",
+  "payload_firmware",
+  "parameter_version",
+  "esc_version",
+  "amended_from",
+  "approvals_section",
+  "system_engineering",
+  "quality",
+  "bd",
+  "quality_assurance",
+  "column_break_lw5ol",
+  "qc_pilot",
+  "product_team",
+  "manufacturing",
+  "customer_support"
+ ],
+ "fields": [
+  {
+   "fieldname": "system_delivery_configuration_section",
+   "fieldtype": "Heading",
+   "label": "SYSTEM DELIVERY CONFIGURATION "
+  },
+  {
+   "description": "Below Details are filled by Business Development",
+   "fieldname": "general_information_section",
+   "fieldtype": "Section Break",
+   "label": "1. GENERAL INFORMATION"
+  },
+  {
+   "fetch_from": "sales_order_number.customer_name",
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Customer Name"
+  },
+  {
+   "fieldname": "order_quantity",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Order Quantity",
+   "reqd": 1
+  },
+  {
+   "fieldname": "revision",
+   "fieldtype": "Int",
+   "label": "Revision",
+   "read_only": 1
+  },
+  {
+   "fieldname": "original_reference",
+   "fieldtype": "Link",
+   "label": "Original Reference",
+   "options": "Delivery Requirement Sheet",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_tx6i",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "sales_order_number.delivery_date",
+   "fieldname": "estimated_delivery_date",
+   "fieldtype": "Data",
+   "label": "Estimated Delivery Date"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Active"
+  },
+  {
+   "allow_on_submit": 1,
+   "fetch_from": "sales_order_number.customer",
+   "fieldname": "customer_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Customer ID"
+  },
+  {
+   "fieldname": "sales_order_number",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sales Order Number",
+   "options": "Sales Order"
+  },
+  {
+   "fieldname": "previous_reference",
+   "fieldtype": "Link",
+   "label": "Previous Reference",
+   "options": "Delivery Requirement Sheet",
+   "read_only": 1
+  },
+  {
+   "fieldname": "bd_section_section",
+   "fieldtype": "Section Break",
+   "label": "BD SECTION"
+  },
+  {
+   "fieldname": "has_the_demo_been_given_to_the_customer",
+   "fieldtype": "Select",
+   "label": "Has the demo been given to the customer?",
+   "options": "Yes\nNo"
+  },
+  {
+   "description": "Information to be provided by BD inline with Customer Requirements",
+   "fieldname": "drs_use_case",
+   "fieldtype": "Small Text",
+   "label": "Customer Use Case"
+  },
+  {
+   "fieldname": "column_break_vsm3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Demo videos recording links to be attached by BD SharePoint link",
+   "fieldname": "recorded_video_link",
+   "fieldtype": "Attach",
+   "label": "Recorded video link"
+  },
+  {
+   "fieldname": "uin_requirement",
+   "fieldtype": "Select",
+   "label": "UIN Requirement",
+   "options": "Yes\nNo",
+   "reqd": 1
+  },
+  {
+   "description": "Select and fill information about the required product configuration as per TDS Only\nAnything beyond TDS needs to be specified in the Others Section\n",
+   "fieldname": "2_system_requirement_section",
+   "fieldtype": "Section Break",
+   "label": "2. SYSTEM REQUIREMENT"
+  },
+  {
+   "fieldname": "product",
+   "fieldtype": "Select",
+   "label": "Product",
+   "options": "A200XTR\nA200XTT\nA200XTL\nAT-15\nA410XT-0 ODS\nA410XT-5 ODS\nArgus\nExyn",
+   "reqd": 1
+  },
+  {
+   "fieldname": "ground_control_station",
+   "fieldtype": "Select",
+   "label": "Ground Control Station",
+   "options": "Fully Rugged Laptop\nSemi-rugged Laptop\nHandheld controller\nNot Applicable\nAny other",
+   "reqd": 1
+  },
+  {
+   "fieldname": "payload_1",
+   "fieldtype": "Select",
+   "label": "Payload 1",
+   "options": "(EO) Payload for Day 10x(Optical zoom) with Tracking\nInfrared (IR) Payload for Night - 320p with Tracking\n10X Optical Zoom - Without Tracking\nInfrared (IR) Payload for Night - 640p with Tracking\nMapping Payload 16mm\nMapping Payload 30mm\nMapping Payload 20mm\nHigh-resolution Multispectral Payload\n4K Electro Optic (EO) Payload for Day\nColor Electro Optic (EO) Camera for Day  10x Tracking\nInfrared (IR) Camera for Night (IR 35mm)\nRGB Mapping Payload (24MP + Sony 50mm Autofocus\nlens)\nInfrared (IR) Payload for Night - 320p without Tracking\nNightHawk2 UZ-360 Payload 20x (optical zoom day) 4x (digital zoom night)\nMapping Payload 50mm\nTraining Payload\nDragon Eye Payload 1280 X 780P\nNot Required",
+   "reqd": 1
+  },
+  {
+   "fieldname": "payload_2",
+   "fieldtype": "Select",
+   "label": "Payload 2",
+   "options": "Electro-Optic (EO) Payload for Day 10x(Optical zoom) with Tracking\n10X Optical Zoom - Without Tracking\nInfrared (IR) Payload for Night - 320p with Tracking\nInfrared (IR) Payload for Night - 640p with Tracking\nMapping Payload 16mm\nMapping Payload 30mm\nMapping Payload 20mm\nHigh-resolution Multispectral Payload\n4K Electro Optic (EO) Payload for Day\nColor Electro Optic (EO) Camera for Day  10x Tracking\nInfrared (IR) Camera for Night (IR 35mm)\nRGB Mapping Payload (24MP + Sony 50mm Autofocus\nlens)\nInfrared (IR) Payload for Night - 320p without Tracking\nIP camera module 4x (Digital Zoom through CMS)\nTraining Payload\nNot Required",
+   "reqd": 1
+  },
+  {
+   "fieldname": "range",
+   "fieldtype": "Select",
+   "label": "Range",
+   "options": "2 Km\n5 Km\n7 Km\n15 Km\nNot Applicable",
+   "reqd": 1
+  },
+  {
+   "fieldname": "battery_mah",
+   "fieldtype": "Select",
+   "label": "Battery MAh",
+   "options": "6600 MAh\n9900 MAh\n16500 MAh\n23000 MAh\n30000 MAh\n12AH\n10AH\nNot Applicable"
+  },
+  {
+   "fieldname": "column_break_nq453",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "bis_label",
+   "fieldtype": "Select",
+   "label": "BIS Label",
+   "options": "Yes\nNo"
+  },
+  {
+   "fieldname": "manuals_released_to_cms",
+   "fieldtype": "Select",
+   "label": "Manuals released to CMS",
+   "options": "Yes\nNo"
+  },
+  {
+   "default": "0",
+   "fieldname": "english_user_manulas",
+   "fieldtype": "Check",
+   "label": "English user manuals"
+  },
+  {
+   "default": "0",
+   "fieldname": "hindi_user_manuals",
+   "fieldtype": "Check",
+   "label": "Hindi user manuals"
+  },
+  {
+   "default": "0",
+   "fieldname": "flight_logbook",
+   "fieldtype": "Check",
+   "label": "Flight logbook"
+  },
+  {
+   "default": "0",
+   "fieldname": "battery_logbook",
+   "fieldtype": "Check",
+   "label": "Battery logbook"
+  },
+  {
+   "default": "0",
+   "fieldname": "maintenance_logbook",
+   "fieldtype": "Check",
+   "label": "Maintenance logbook "
+  },
+  {
+   "fieldname": "column_break_qvubg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ground_control_station_product_specification",
+   "fieldtype": "Small Text",
+   "label": "Ground Control Station Product Specification"
+  },
+  {
+   "fieldname": "accessories",
+   "fieldtype": "Select",
+   "label": "Accessories",
+   "options": "Transportation Case\nSD card for Payload\nAdditional Semi Rugged/ Fully Rugged Laptop\nNA",
+   "reqd": 1
+  },
+  {
+   "fieldname": "gdt_options",
+   "fieldtype": "Select",
+   "label": "GDT Options",
+   "options": "Mini GDT V2\nBigger GDT with Amplifier\nBigger GDT Without Amplifier\nGDT+RVT\nMini GDT V1\nGDT"
+  },
+  {
+   "description": "(Any requirements outside the product TDS to be filled here, including features and items)\nCapture Customer Use Case (If any)",
+   "fieldname": "others",
+   "fieldtype": "Small Text",
+   "label": "Others"
+  },
+  {
+   "default": "0",
+   "fieldname": "on_board_recording",
+   "fieldtype": "Check",
+   "label": "On Board Video Recording",
+   "options": "Yes\nNo"
+  },
+  {
+   "fieldname": "section_break_m95k3",
+   "fieldtype": "Section Break"
+  },
+  {
+   "description": "Spares and Accessories information shall be filled by PPC",
+   "fieldname": "3_quantity",
+   "fieldtype": "Table",
+   "label": "3. QUANTITY",
+   "options": "Quantity"
+  },
+  {
+   "fieldname": "manufacturing_bom_details_section",
+   "fieldtype": "Section Break",
+   "label": "Manufacturing BOM Details"
+  },
+  {
+   "fieldname": "air_vehicle",
+   "fieldtype": "Link",
+   "label": "Air Vehicle",
+   "options": "BOM"
+  },
+  {
+   "fieldname": "ground_data_terminal",
+   "fieldtype": "Link",
+   "label": "Ground Data Terminal",
+   "options": "BOM"
+  },
+  {
+   "fieldname": "payload",
+   "fieldtype": "Link",
+   "label": "Payload Details 1",
+   "options": "BOM"
+  },
+  {
+   "fieldname": "night_payload",
+   "fieldtype": "Link",
+   "label": "Payload Details 2",
+   "options": "BOM"
+  },
+  {
+   "fieldname": "final_sales_bom",
+   "fieldtype": "Attach",
+   "label": "Final Sales BOM"
+  },
+  {
+   "fieldname": "column_break_lfg8r",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "customer_cms_sheet",
+   "fieldtype": "Attach",
+   "label": "Customer CMS Sheet"
+  },
+  {
+   "fieldname": "packaging_1",
+   "fieldtype": "Link",
+   "label": "Packaging 1",
+   "options": "BOM"
+  },
+  {
+   "fieldname": "packaging_2",
+   "fieldtype": "Link",
+   "label": "Packaging 2",
+   "options": "BOM"
+  },
+  {
+   "fieldname": "internal_packing_checklist",
+   "fieldtype": "Attach",
+   "label": "Internal Packing Checklist"
+  },
+  {
+   "fieldname": "customer_packing_checklist",
+   "fieldtype": "Attach",
+   "label": "Customer Packing Checklist"
+  },
+  {
+   "description": "Single Part BOM Number",
+   "fieldname": "other",
+   "fieldtype": "Link",
+   "label": "Other",
+   "options": "BOM"
+  },
+  {
+   "description": "CUSTOMER SUPPORT SECTION",
+   "fieldname": "4_sytem_id_information_section",
+   "fieldtype": "Section Break",
+   "label": "4. SYSTEM ID INFORMATION"
+  },
+  {
+   "fieldname": "system_ids",
+   "fieldtype": "Data",
+   "label": "System ID's "
+  },
+  {
+   "description": "CUSTOMER SUPPORT SECTION",
+   "fieldname": "51_laptop_and_mcs_settings_section",
+   "fieldtype": "Section Break",
+   "label": "5.1 LAPTOP AND MCS SETTINGS"
+  },
+  {
+   "fieldname": "laptop_ip_address",
+   "fieldtype": "Data",
+   "label": "Laptop IP address"
+  },
+  {
+   "fieldname": "hotspot_details",
+   "fieldtype": "Data",
+   "label": "Hotspot details"
+  },
+  {
+   "fieldname": "subnet",
+   "fieldtype": "Data",
+   "label": "Subnet"
+  },
+  {
+   "fieldname": "default_gateway",
+   "fieldtype": "Data",
+   "label": "Default Gateway"
+  },
+  {
+   "fieldname": "column_break_jlpga",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "username",
+   "fieldtype": "Data",
+   "label": "Admin Username"
+  },
+  {
+   "fieldname": "admin_password",
+   "fieldtype": "Data",
+   "label": "Admin Password"
+  },
+  {
+   "fieldname": "user_password",
+   "fieldtype": "Data",
+   "label": "User Password"
+  },
+  {
+   "description": "CUSTOMER SUPPORT SECTION",
+   "fieldname": "52_payload_settings_section",
+   "fieldtype": "Section Break",
+   "label": "5.2 PAYLOAD SETTINGS"
+  },
+  {
+   "fieldname": "payload_ip_address",
+   "fieldtype": "Data",
+   "label": "Payload IP Address"
+  },
+  {
+   "fieldname": "column_break_vir2w",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "subnet_info",
+   "fieldtype": "Data",
+   "label": "Subnet Info"
+  },
+  {
+   "description": "CUSTOMER SUPPORT SECTION",
+   "fieldname": "53_air_radio_settings_section",
+   "fieldtype": "Section Break",
+   "label": "5.3 AIR RADIO SETTINGS"
+  },
+  {
+   "fieldname": "air_radio_ip_address",
+   "fieldtype": "Data",
+   "label": "Air Radio IP Address"
+  },
+  {
+   "fieldname": "network_id",
+   "fieldtype": "Small Text",
+   "label": "Network ID"
+  },
+  {
+   "fieldname": "encryption_password",
+   "fieldtype": "Data",
+   "label": "Encryption Password"
+  },
+  {
+   "fieldname": "login_username",
+   "fieldtype": "Data",
+   "label": "Login User 1"
+  },
+  {
+   "fieldname": "column_break_kp9ow",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "login_password",
+   "fieldtype": "Data",
+   "label": "Login Password 1 "
+  },
+  {
+   "fieldname": "subnet_information",
+   "fieldtype": "Data",
+   "label": "Subnet Information"
+  },
+  {
+   "fieldname": "frequency",
+   "fieldtype": "Data",
+   "label": "Frequency 1"
+  },
+  {
+   "description": "CUSTOMER SUPPORT SECTION",
+   "fieldname": "54_gdt_radio_settings_section",
+   "fieldtype": "Section Break",
+   "label": "5.4 GDT RADIO SETTINGS"
+  },
+  {
+   "fieldname": "gdt_radio_ip_address",
+   "fieldtype": "Data",
+   "label": "GDT Radio IP Address"
+  },
+  {
+   "fieldname": "network_id_details",
+   "fieldtype": "Data",
+   "label": "Network ID Details"
+  },
+  {
+   "fieldname": "encryption_password_details",
+   "fieldtype": "Data",
+   "label": "Encryption Password Details"
+  },
+  {
+   "fieldname": "column_break_m9k7w",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "login_user_2",
+   "fieldtype": "Data",
+   "label": "Login User 2"
+  },
+  {
+   "fieldname": "login_password_2",
+   "fieldtype": "Data",
+   "label": "Login Password 2"
+  },
+  {
+   "fieldname": "subnet__details",
+   "fieldtype": "Data",
+   "label": "Subnet  Details"
+  },
+  {
+   "fieldname": "frequency_2",
+   "fieldtype": "Data",
+   "label": "Frequency 2"
+  },
+  {
+   "fieldname": "55_mcs_configuration_details_section",
+   "fieldtype": "Section Break",
+   "label": "5.5 MCS CONFIGURATION DETAILS"
+  },
+  {
+   "fieldname": "mcs_version",
+   "fieldtype": "Data",
+   "label": "MCS Version"
+  },
+  {
+   "fieldname": "attach_v318t",
+   "fieldtype": "Attach"
+  },
+  {
+   "fieldname": "column_break_uozm4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "additional_features",
+   "fieldtype": "Data",
+   "label": "Additional Features"
+  },
+  {
+   "fieldname": "56_firmware_and_parameter_details",
+   "fieldtype": "Section Break",
+   "label": "5.6 FIRMWARE AND PARAMETER DETAILS"
+  },
+  {
+   "fieldname": "asteria_autopilot_firmware_version",
+   "fieldtype": "Small Text",
+   "label": "Asteria Autopilot Firmware Version"
+  },
+  {
+   "fieldname": "radio_firmware",
+   "fieldtype": "Small Text",
+   "label": "Radio Firmware"
+  },
+  {
+   "fieldname": "attach_tle4t",
+   "fieldtype": "Small Text",
+   "label": "AV 128 bits"
+  },
+  {
+   "fieldname": "av_256_bits",
+   "fieldtype": "Small Text",
+   "label": "AV 256 bits"
+  },
+  {
+   "fieldname": "gdt",
+   "fieldtype": "Small Text",
+   "label": "GDT 128 bits"
+  },
+  {
+   "fieldname": "gdt_256_bits",
+   "fieldtype": "Small Text",
+   "label": "GDT 256 bits"
+  },
+  {
+   "fieldname": "column_break_bt5sp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payload_firmware",
+   "fieldtype": "Small Text",
+   "label": "Payload Firmware"
+  },
+  {
+   "fieldname": "parameter_version",
+   "fieldtype": "Small Text",
+   "label": "Autopilot Parameter Version"
+  },
+  {
+   "fieldname": "esc_version",
+   "fieldtype": "Small Text",
+   "label": "ESC Firmware Version"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Delivery Requirement Sheet",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "approvals_section",
+   "fieldtype": "Section Break",
+   "label": "APPROVALS"
+  },
+  {
+   "fieldname": "system_engineering",
+   "fieldtype": "Link",
+   "label": "System Engineering",
+   "options": "User"
+  },
+  {
+   "fieldname": "quality",
+   "fieldtype": "Link",
+   "label": "Quality",
+   "options": "User"
+  },
+  {
+   "fieldname": "bd",
+   "fieldtype": "Link",
+   "label": "BD",
+   "options": "User"
+  },
+  {
+   "fieldname": "quality_assurance",
+   "fieldtype": "Link",
+   "label": "Quality Assurance",
+   "options": "User"
+  },
+  {
+   "fieldname": "column_break_lw5ol",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "qc_pilot",
+   "fieldtype": "Link",
+   "label": "QC Pilot",
+   "options": "User"
+  },
+  {
+   "fieldname": "product_team",
+   "fieldtype": "Link",
+   "label": "Product Team",
+   "options": "User"
+  },
+  {
+   "fieldname": "manufacturing",
+   "fieldtype": "Link",
+   "label": "Manufacturing",
+   "options": "User"
+  },
+  {
+   "fieldname": "customer_support",
+   "fieldtype": "Link",
+   "label": "Customer Support",
+   "options": "User"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [
+  {
+   "group": "COC",
+   "link_doctype": "COC",
+   "link_fieldname": "sales_order"
+  },
+  {
+   "group": "Deviation Form",
+   "link_doctype": "Deviation Form",
+   "link_fieldname": "sales_order"
+  },
+  {
+   "group": "MOM",
+   "link_doctype": "Minutes of Meeting",
+   "link_fieldname": "sales_order"
+  }
+ ],
+ "modified": "2025-11-28 15:31:39.958766",
+ "modified_by": "erp.support@asteria.co.in",
+ "module": "Asteria",
+ "name": "Delivery Requirement Sheet",
+ "naming_rule": "Expression (old style)",
+ "owner": "systemadmin@asteria.co.in",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1,
+ "track_views": 1
+}

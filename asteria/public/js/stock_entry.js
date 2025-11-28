@@ -203,7 +203,7 @@ frappe.ui.form.on("Stock Entry", {
         }
         erpnext.SerialBatchPackageSelector = CustomSerialBatchPackageSelector;
         
-        if (frm.doc.docstatus === 1 && frm.perm && frm.perm[0].cancel) {
+        if (frm.doc.docstatus === 0 && frm.perm && frm.perm[0].cancel) {
             
             // Avoid duplicate menu items
 

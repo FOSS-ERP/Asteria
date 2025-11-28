@@ -96,3 +96,15 @@ def cancel_stock_entry_in_rq(stock_entry):
 def cancel_stock_entry(stock_entry):
     doc = frappe.get_doc("Stock Entry", stock_entry)
     doc.cancel()
+
+
+@frappe.whitelist()
+def submit_stock_entry_in_rq(stock_entry):
+    frappe.enqueue(
+            submit_stock_entry, stock_entry=stock_entry, queue="long", timeout=7200
+        )
+    return True
+
+def submit_stock_entry(stock_entry):
+    doc = frappe.get_doc("Stock Entry", stock_entry)
+    doc.submit()

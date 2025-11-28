@@ -12,8 +12,18 @@ class DeliveryRequirementSheet(Document):
         # For base documents or duplicates, let Frappe handle naming from series
     
     def before_save(self):
-        # Ensure base documents have original_reference set
-        if not self.original_reference and not self.get("__islocal__"):
+        # Check if this is a duplicate by looking at creation context
+        if (self.get("__islocal__") and 
+            frappe.flags.in_copy_doc and 
+            frappe.flags.copy_doc_original_name):
+            # This is a duplicate via standard duplicate button
+            self.original_reference = None
+            self.revision = 0
+            self.previous_reference = None
+            self.is_active = 0
+        
+        # Set original_reference for new base documents after name is assigned
+        if not self.original_reference and not self.get("__islocal__") and self.name:
             self.original_reference = self.name
             self.revision = 0
 

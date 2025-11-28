@@ -203,7 +203,7 @@ frappe.ui.form.on("Stock Entry", {
         }
         erpnext.SerialBatchPackageSelector = CustomSerialBatchPackageSelector;
         
-        if (frm.doc.docstatus === 0 && frm.perm && frm.perm[0].cancel) {
+        if (frm.doc.docstatus === 1 && frm.perm && frm.perm[0].cancel) {
             
             // Avoid duplicate menu items
 
@@ -221,6 +221,31 @@ frappe.ui.form.on("Stock Entry", {
                             callback: (r) => {
                                 if (r?.message) {
                                     frappe.msgprint(__('Cancellation process started in background. Please check status after a few minutes.'));
+                                }
+                            }
+                        });
+                    }
+                );
+            });
+        }
+        if (frm.doc.docstatus === 0 && frm.perm && frm.perm[0].submit) {
+            
+            // Avoid duplicate menu items
+
+            frm.page.add_menu_item(__('Submit Doc in RQ'), () => {
+                frappe.confirm(
+                    __('Are you sure you want to submit this Stock Entry in RQ?'),
+                    () => {
+                        frappe.call({
+                            method: 'asteria.asteria.stock_entry.submit_stock_entry_in_rq',
+                            args: {
+                                stock_entry: frm.doc.name
+                            },
+                            freeze: true,
+                            freeze_message: __('Processing Submitting...'),
+                            callback: (r) => {
+                                if (r?.message) {
+                                    frappe.msgprint(__('Submitting process started in background. Please check status after a few minutes.'));
                                 }
                             }
                         });

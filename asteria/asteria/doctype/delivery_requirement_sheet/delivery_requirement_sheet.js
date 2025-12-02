@@ -2,12 +2,33 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on('Delivery Requirement Sheet', {
+    onload(frm) {
+        // This runs when the form loads - perfect for detecting duplicates
+        if (frm.is_new()) {
+            // Check if this is a duplicated document with wrong original_reference
+            if (frm.doc.original_reference && frm.doc.original_reference !== frm.doc.name) {
+                console.log('Detected duplicated document - resetting versioning fields');
+                
+                // Reset all versioning fields to make this a new base document
+                frm.set_value('original_reference', null);
+                frm.set_value('revision', 0);
+                frm.set_value('previous_reference', null);
+                frm.set_value('is_active', 1);
+                
+                frappe.show_alert({
+                    message: __('Document duplicated as a new base document. Versioning fields reset.'),
+                    indicator: 'blue'
+                });
+            }
+        }
+    },
+
     refresh(frm) {
         if (!frm.is_new()) {
             // Add "Create New Version" button
             frm.add_custom_button(__('Create New Version'), () => {
                 frappe.confirm(
-                    __('Are you sure you want to create a new version?<br><br>This will:<br>• Create a new version<br>• Deactivate all previous versions<br>• Make the new version the active one'),
+                    __('Are you sure you want to create a new version?'),
                     () => {
                         frappe.call({
                             method: 'asteria.asteria.doctype.delivery_requirement_sheet.delivery_requirement_sheet.create_new_version',

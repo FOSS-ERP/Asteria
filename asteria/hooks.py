@@ -158,7 +158,7 @@ doc_events = {
 	},
 	"Job Card": {
 		"on_submit": "asteria.asteria.doc_events.job_card.on_submit"
-	}
+	},
 }
 
 # Scheduled Tasks

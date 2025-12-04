@@ -182,34 +182,51 @@ def build_conditions(self, material_transfer_entries):
 	return conditions
 
 def get_serial_no_data(conditions, material_transfer_entries):
-	"""Fetch active serial numbers based on conditions."""
-	serial_no =  frappe.db.sql(f"""
-		SELECT sbe.serial_no, serial.warehouse, serial.batch_no
-		FROM `tabSerial and Batch Bundle` AS sbb
-		LEFT JOIN `tabSerial and Batch Entry` AS sbe ON sbe.parent = sbb.name
-		LEFT JOIN `tabSerial No` AS serial ON serial.name = sbe.serial_no
-		WHERE 1=1 AND serial.status="Active" {conditions}
-	""", as_dict=1)
-	
-	str_serial_no_data = frappe.db.sql(f""" 
-					Select sed.serial_no
-					From `tabStock Entry Detail` as sed
-					Where sed.parent in ({0})
-	""".format(
-		", ".join([f'"{entry}"' for entry in material_transfer_entries])
-	),as_dict=1)
-	if str_serial_no_data:
-		for row in str_serial_no_data:
-			if not row.get("serial_no"):
-				continue
-			serial_nos = row.get("serial_no").split("\n")
-			for s in serial_nos:
-				serial_no.append({
-					"serial_no" : s
-				})
+    """Fetch active serial numbers based on conditions."""
 
-	return serial_no
+    # 1️⃣ Fetch serial numbers from Serial & Batch tables
+    serial_no = frappe.db.sql(
+        f"""
+        SELECT 
+            sbe.serial_no, 
+            serial.warehouse, 
+            serial.batch_no
+        FROM `tabSerial and Batch Bundle` AS sbb
+        LEFT JOIN `tabSerial and Batch Entry` AS sbe 
+            ON sbe.parent = sbb.name
+        LEFT JOIN `tabSerial No` AS serial 
+            ON serial.name = sbe.serial_no
+        WHERE serial.status = "Active" {conditions}
+        """,
+        as_dict=True,
+    )
 
+    if not material_transfer_entries:
+        return serial_no
+
+    # 2️⃣ Fetch serial numbers from Stock Entry Detail (in one optimized query)
+    placeholders = ", ".join(["%s"] * len(material_transfer_entries))
+
+    raw_serials = frappe.db.sql(
+        f"""
+        SELECT sed.serial_no
+        FROM `tabStock Entry Detail` AS sed
+        WHERE sed.parent IN ({placeholders})
+        """,
+        values=material_transfer_entries,
+        as_dict=True,
+    )
+
+    # 3️⃣ Split and flatten serial numbers
+    extra_serials = []
+    for row in raw_serials:
+        if row.serial_no:
+            extra_serials.extend(
+                {"serial_no": s.strip()}
+                for s in row.serial_no.split("\n") if s.strip()
+            )
+
+    return serial_no + extra_serials
 
 
 def get_batch_no_data(conditions):

@@ -1,8 +1,6 @@
 # Copyright (c) 2025, Viral and contributors
 # For license information, please see license.txt
 
-# import frappe
-
 
 import json
 import frappe
@@ -29,7 +27,6 @@ def get_columns():
     ]
 
 def get_data(filters):
-    # Build conditions
     conditions = ["1=1"]
     values = {}
     
@@ -47,7 +44,7 @@ def get_data(filters):
     
     where_clause = " AND ".join(conditions)
     
-    # Fetch version records
+    
     versions = frappe.db.sql(f"""
         SELECT 
             v.name as version_id,
@@ -73,7 +70,7 @@ def get_data(filters):
         except:
             continue
         
-        # Get original document metadata
+        # get original document
         old_user, old_timestamp = get_doc_meta(v.ref_doctype, v.docname)
         
         # Process changed fields
@@ -111,7 +108,7 @@ def get_data(filters):
                             old_value = field_change[1] if len(field_change) > 1 else ""
                             new_value = field_change[2] if len(field_change) > 2 else ""
                             
-                            property_name = f"{child_table} → Row {row_index} → {fieldname}"
+                            property_name = f"{child_table} ({fieldname})"
                             
                             result.append({
                                 "ref_doctype": v.ref_doctype,

@@ -260,6 +260,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
     h2h_log.total_no_of_payments = len(final_payment_data) - len(ast.literal_eval(invoices))
     h2h_log.total_paid_amount = pe_doc.paid_amount
     h2h_log.log_type = "Upload"
+    total_amount = 0
     for row in final_payment_data:
         if(row[0] == 'A'):
             continue
@@ -271,9 +272,12 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
                 "document_type" : d.reference_doctype,
                 "document" : d.reference_name,
                 "due_date" : d.get("due_date"),
-                "status" : "File Created"
-            })  
-        
+                "status" : "File Created",
+                "amount" : d.allocated_amount
+            })
+            total_amount += flt(d.allocated_amount)
+
+    h2h_log.total_paid_amount = total_amount  
     h2h_log.insert(ignore_permissions=True)
     
     file_doc.insert(ignore_permissions=True)

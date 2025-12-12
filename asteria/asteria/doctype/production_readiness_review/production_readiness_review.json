@@ -1,0 +1,163 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "PRR-.YYYY.-.####.",
+ "creation": "2025-04-14 11:41:23.079371",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_wrww",
+  "revision",
+  "original_reference",
+  "column_break_5r7b",
+  "is_active",
+  "previous_reference",
+  "produciton_readiness_review_checklist_section",
+  "naming_series",
+  "sales_order",
+  "client_name",
+  "column_break_l9qn",
+  "date",
+  "product",
+  "attendees",
+  "amended_from",
+  "section_break_huvy",
+  "doc_list"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_wrww",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "revision",
+   "fieldtype": "Int",
+   "label": "Revision"
+  },
+  {
+   "fieldname": "original_reference",
+   "fieldtype": "Link",
+   "label": "Original Reference",
+   "options": "Production Readiness Review"
+  },
+  {
+   "fieldname": "column_break_5r7b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
+  },
+  {
+   "fieldname": "produciton_readiness_review_checklist_section",
+   "fieldtype": "Section Break",
+   "label": "PRODUCITON READINESS REVIEW CHECKLIST"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "PRR-.YYYY.-####"
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order"
+  },
+  {
+   "fetch_from": "sales_order.customer_name",
+   "fieldname": "client_name",
+   "fieldtype": "Data",
+   "label": "Client Name"
+  },
+  {
+   "fieldname": "column_break_l9qn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "sales_order.delivery_date",
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "label": "Sales Order Delivery Date"
+  },
+  {
+   "fieldname": "product",
+   "fieldtype": "Select",
+   "label": "Product",
+   "options": "A200XT\nAT15\nA410XT\nArgus\nISAT-S"
+  },
+  {
+   "fieldname": "attendees",
+   "fieldtype": "Small Text",
+   "label": "Attendees"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Production Readiness Review",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "section_break_huvy",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "doc_list",
+   "fieldtype": "Table",
+   "label": "DOCUMENT AVAILABILITY SUMMARY",
+   "options": "Document"
+  },
+  {
+   "fieldname": "previous_reference",
+   "fieldtype": "Link",
+   "label": "Previous Reference",
+   "options": "Production Readiness Review"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [
+  {
+   "group": "PRR Actions",
+   "link_doctype": "Action",
+   "link_fieldname": "mom_number"
+  }
+ ],
+ "modified": "2025-12-11 12:23:40.819441",
+ "modified_by": "Administrator",
+ "module": "asteria",
+ "name": "Production Readiness Review",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1,
+ "track_views": 1
+}

@@ -84,6 +84,6 @@ def check_status():
                 except Exception:
                     frappe.log_error(frappe.get_traceback(), "CSV Processing Failed")
 
-    # ✅ Save log again after processing rows
-    h2h_log.total_paid_amount = total_paid_amount
-    h2h_log.save(ignore_permissions=True)
+        # ✅ Save log again after processing rows
+        h2h_log.total_paid_amount = total_paid_amount
+        h2h_log.save(ignore_permissions=True)

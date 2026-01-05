@@ -77,3 +77,39 @@ def update_aging_in_pr(self, method):
         self.payment_aging = abs(diff_days)
     else:
         self.payment_aging = 0
+
+from frappe.model.mapper import get_mapped_doc
+
+@frappe.whitelist()
+def create_production_plan(source_name, target_doc=None):
+
+
+    doclist = get_mapped_doc(
+		"Sales Order",
+		source_name,
+		{
+			"Sales Order": {
+                "doctype": "Production Plan", 
+                "validation": {"docstatus": ["=", 1]},
+                "field_map" : {
+                    
+                }
+            },
+		},
+		target_doc,
+	)
+    doclist.update(
+        {
+            "doctype" : "Production Plan",
+            "posting_date" : getdate(),
+            "get_items_from" : "Sales Order",
+            "sales_orders" : [
+                {
+                    "sales_order" : source_name,
+                }
+            ]
+        }
+    )
+
+    doclist.get_items()
+    return doclist

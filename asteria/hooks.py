@@ -50,6 +50,7 @@ doctype_js = {
 	"Expense Claim" : "public/js/expense_claim.js",
 	"Expense Claim Type" : "public/js/expense_claim_type.js",
 	"Job Card" : "public/js/job_card.js",
+	"Sales Order" : "public/js/sales_order.js"
 	}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -202,9 +203,9 @@ override_whitelisted_methods = {
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
 # along with any modifications made in other Frappe apps
-# override_doctype_dashboards = {
-# 	"Task": "asteria.task.get_dashboard_data"
-# }
+override_doctype_dashboards = {
+	"Sales Order": "asteria.asteria.doc_events.sales_order_dashboard.get_data"
+}
 
 # exempt linked doctypes from being automatically cancelled
 #

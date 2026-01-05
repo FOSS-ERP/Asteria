@@ -65,7 +65,7 @@ def on_submit(self, method):
                 serial_no = get_auto_data(**args) or []
                 sr_list = [d.get("serial_no") for d in serial_no if d.get("serial_no")]
 
-                if row.qty != len(sr_list):
+                if serial_no and row.qty != len(sr_list):
                     row.qty = len(sr_list)
                     
                 if sr_list: 

@@ -18,7 +18,7 @@ def on_submit(self,method=None):
 
 def update_warenty_expiry_date(self):
     if self.voucher_type != "Purchase Receipt":
-        continue
+        return
     if not frappe.db.get_value("Purchase Receipt", self.voucher_no, "custom_supplier_invoice_date"):
         return
     else:

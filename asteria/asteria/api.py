@@ -66,10 +66,14 @@ def set_payment_aging_for_payment_request():
             # only store when less than 0
             if diff_days < 0:
                 frappe.db.set_value("Payment Request", pr, "payment_aging", abs(diff_days))
+            else:
+                frappe.db.set_value("Payment Request", pr, "payment_aging", 0)
 
 
 def update_aging_in_pr(self, method):
-    if getdate(self.custom_payment_need_date) < getdate():
-        diff_days = (getdate(self.custom_payment_need_date) - getdate()).days
-        if diff_days < 0:
-            self.payment_aging = abs(diff_days)
+    diff_days = (getdate(self.custom_payment_need_date) - getdate()).days
+
+    if diff_days < 0:
+        self.payment_aging = abs(diff_days)
+    else:
+        self.payment_aging = 0

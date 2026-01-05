@@ -1,5 +1,7 @@
 import frappe
 import re
+from frappe.model.mapper import get_mapped_doc
+from frappe.utils import getdate
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
@@ -78,38 +80,37 @@ def update_aging_in_pr(self, method):
     else:
         self.payment_aging = 0
 
-from frappe.model.mapper import get_mapped_doc
+
 
 @frappe.whitelist()
 def create_production_plan(source_name, target_doc=None):
 
+    def set_missing_values(source, target):
+        target.posting_date = getdate()
+        target.get_items_from = "Sales Order"
 
-    doclist = get_mapped_doc(
-		"Sales Order",
-		source_name,
-		{
-			"Sales Order": {
-                "doctype": "Production Plan", 
-                "validation": {"docstatus": ["=", 1]},
-                "field_map" : {
-                    
-                }
-            },
-		},
-		target_doc,
-	)
-    doclist.update(
+        # clear existing rows just in case
+        target.sales_orders = []
+
+        target.append("sales_orders", {
+            "sales_order": source.name,
+            "sales_order_date": source.transaction_date,
+            "customer": source.customer,
+            "grand_total": source.grand_total
+        })
+
+    doc = get_mapped_doc(
+        "Sales Order",
+        source_name,
         {
-            "doctype" : "Production Plan",
-            "posting_date" : getdate(),
-            "get_items_from" : "Sales Order",
-            "sales_orders" : [
-                {
-                    "sales_order" : source_name,
-                }
-            ]
-        }
+            "Sales Order": {
+                "doctype": "Production Plan",
+                "validation": {"docstatus": ["=", 1]},
+            }
+        },
+        target_doc,
+        set_missing_values
     )
 
-    doclist.get_items()
-    return doclist
+    doc.get_items()
+    return doc

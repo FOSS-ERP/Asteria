@@ -77,7 +77,55 @@ def setup_custom_fields():
                 "insert_after" : "city",
                 "reqd" : 1
             }
+        ],
+        "Serial No" : [
+            {
+                "label" : "Warranty Expiry Date For Purchase",
+                "fieldname" : "warranty_expiry_date_purchase",
+                "fieldtype" : "Date",
+                "insert_after" : "amc_expiry_date",
+                "reqd" : 0   
+            },
+        ],
+        "Purchase Receipt Item" : [
+            {
+                "label" : "Warranty Period Day For Purchase",
+                "fieldname" : "warranty_period_day_purchase",
+                "fieldtype" : "Int",
+                "insert_after" : "item_name",
+                "reqd" : 0 ,
+                "fetch_from" : "item_code.warranty_period_day_purchase",
+                "fetch_if_empty" : 1
+            }
+        ],
+        "Item" : [
+            {
+                "label" : "Warranty Period Day For Purchase",
+                "fieldname" : "warranty_period_day_purchase",
+                "fieldtype" : "Int",
+                "insert_after" : "warranty_period",
+                "reqd" : 0 
+            }
+        ],
+        "Batch" : [
+            {
+                "label" : "Warranty Expiry Date For Purchase",
+                "fieldname" : "warranty_expiry_date_purchase",
+                "fieldtype" : "Date",
+                "insert_after" : "expiry_date",
+                "reqd" : 0  
+            }
+        ],
+        "Payment Request" : [
+            {
+                "label" : "Payment Aging (In Days)",
+                "fieldname" : "payment_aging",
+                "fieldtype" : "Data",
+                "insert_after" : "mode_of_payment",
+                "reqd" : 0  
+            }
         ]
+        
     }
     
     create_custom_fields(custom_fields)

@@ -6,3 +6,4 @@
 # Patches added in this section will be executed after doctypes are migrated
 asteria.patches.create_field_se_notification
 asteria.patches.create_field_stock_settings
+asteria.patches.create_custom_field_stock_entry

@@ -22,7 +22,10 @@ def get_auto_data(**kwargs):
 def get_available_serial_nos(kwargs):
 	# start foss changes
 	if kwargs.get("doc"):
-		doc = frappe._dict(parse_json(kwargs.doc))
+		try:
+			doc = frappe._dict(parse_json(kwargs.doc))
+		except:
+			doc = kwargs.doc
 		if doc.get("doctype") == "Stock Entry" and doc.get("stock_entry_type") == "Manufacture":
 			material_transfer_entry = frappe.get_all("Stock Entry", { 
 				"stock_entry_type" : "Material Transfer for Manufacture",
@@ -51,13 +54,35 @@ def get_available_serial_nos(kwargs):
 				limit = f"Limit 10000000"
 
 			serial_no = frappe.db.sql(f"""
-							Select sbe.serial_no, serial.warehouse, serial.batch_no
-							From `tabSerial and Batch Bundle` as sbb
-							Left Join `tabSerial and Batch Entry` as sbe ON sbe.parent =  sbb.name
-							Left Join `tabSerial No` as serial ON serial.name = sbe.serial_no
-							Where 1=1 and serial.status="Active" {conditions} 
-							{limit}
-						""", as_dict=1)
+				SELECT *
+				FROM (
+					SELECT 
+						sbe.serial_no,
+						serial.warehouse,
+						serial.batch_no,
+						sbb.type_of_transaction,
+						sle.posting_datetime,
+						ROW_NUMBER() OVER(
+							PARTITION BY sbe.serial_no
+							ORDER BY sle.posting_datetime DESC
+						) AS rn
+					FROM `tabSerial and Batch Bundle` AS sbb
+					LEFT JOIN `tabSerial and Batch Entry` AS sbe
+						ON sbe.parent = sbb.name
+					LEFT JOIN `tabSerial No` AS serial
+						ON serial.name = sbe.serial_no
+					LEFT JOIN `tabStock Ledger Entry` AS sle 
+						ON sle.serial_and_batch_bundle = sbb.name
+					WHERE 
+						serial.status = "Active"
+						AND sle.is_cancelled = 0
+						{conditions}
+				) t
+				WHERE t.rn = 1
+				ORDER BY posting_datetime DESC
+			""", as_dict=1)
+
+			
 			if serial_no:
 				return serial_no
 	# end changes

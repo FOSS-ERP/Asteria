@@ -49,6 +49,7 @@ doctype_js = {
 	"Stock Entry" : "public/js/stock_entry.js",
 	"Expense Claim" : "public/js/expense_claim.js",
 	"Expense Claim Type" : "public/js/expense_claim_type.js",
+	"Job Card" : "public/js/job_card.js",
 	}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -146,6 +147,7 @@ after_migrate = "asteria.asteria.create_custom_field.setup_custom_fields"
 doc_events = {
 	"Serial and Batch Bundle": {
 		"validate": "asteria.asteria.override.serial_and_batch_bundle.validate",
+		"on_submit" : "asteria.asteria.doc_events.purchase_receipt.on_submit"
 	},
 	"Stock Entry": {
 		"on_submit": "asteria.asteria.stock_entry.on_submit"
@@ -159,6 +161,12 @@ doc_events = {
 	"Job Card": {
 		"on_submit": "asteria.asteria.doc_events.job_card.on_submit"
 	},
+	"Quality Inspection": {
+		"validate" : "asteria.asteria.doc_events.quality_inspection.validate"
+	},
+	"Payment Request" : {
+		"validate" : "asteria.asteria.api.update_aging_in_pr"
+	}
 }
 
 # Scheduled Tasks
@@ -173,6 +181,9 @@ scheduler_events = {
 			"asteria.asteria.doc_events.check_sftp_payment_status.check_status"
 		]
 	},
+	"Daily" : [
+		"asteria.asteria.api.set_payment_aging_for_payment_request"
+	]
 }
 
 # Testing

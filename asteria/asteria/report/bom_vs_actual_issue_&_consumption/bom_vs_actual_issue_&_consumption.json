@@ -1,0 +1,116 @@
+{
+ "add_total_row": 1,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2025-12-08 18:14:41.194205",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "javascript": "frappe.query_reports[\"BoM Vs Actual Issue & Consumption\"] = {\n    \"filters\": [\n        {\n            fieldname: \"from_date\",\n            label: \"From Date\",\n            fieldtype: \"Date\",\n            default: frappe.datetime.month_start()\n        },\n        {\n            fieldname: \"to_date\",\n            label: \"To Date\",\n            fieldtype: \"Date\",\n            default: frappe.datetime.month_end()\n        },\n        {\n            fieldname: \"serial_no\",\n            label: \"Finished Good Serial No\",\n            fieldtype: \"Link\",\n            options: \"Serial No\",\n            get_query: function () {\n                return {\n                    method: \"get_finished_good_serials\"\n                };\n            },\n            on_change: function() {\n                const serial_value = this.get_value();\n                const from_filter = frappe.query_report.get_filter('from_date');\n                const to_filter = frappe.query_report.get_filter('to_date');\n\n                if (serial_value) {\n                    // Disable and clear date filters\n                    from_filter.set_value('');\n                    to_filter.set_value('');\n                    $(from_filter.input).prop('disabled', true);\n                    $(to_filter.input).prop('disabled', true);\n                } else {\n                    // Enable date filters and restore defaults\n                    $(from_filter.input).prop('disabled', false);\n                    $(to_filter.input).prop('disabled', false);\n\n                    if (!from_filter.get_value()) {\n                        from_filter.set_value(frappe.datetime.month_start());\n                    }\n                    if (!to_filter.get_value()) {\n                        to_filter.set_value(frappe.datetime.month_end());\n                    }\n                }\n            }\n        }\n    ]\n};\n",
+ "letter_head": "Asteria Logo",
+ "letterhead": null,
+ "modified": "2025-12-22 12:41:27.363160",
+ "modified_by": "Administrator",
+ "module": "Asteria",
+ "name": "BoM Vs Actual Issue & Consumption",
+ "owner": "gautam@fosserp.com",
+ "prepared_report": 0,
+ "query": "WITH bom_items AS (\n    SELECT  \n        b.name AS bom_no,\n        bi.item_code,\n        bi.stock_qty AS bom_qty,\n        (bi.stock_qty * bi.rate) AS bom_amount\n    FROM `tabBOM` b\n    JOIN `tabBOM Item` bi ON bi.parent = b.name\n),\n\nissued_items AS (\n    SELECT  \n        se.work_order,\n        sed.item_code,\n        SUM(sed.qty) AS issued_qty,\n        SUM(sed.qty * sed.valuation_rate) AS issued_amount\n    FROM `tabStock Entry` se\n    JOIN `tabStock Entry Detail` sed ON sed.parent = se.name\n    WHERE se.purpose = 'Material Transfer for Manufacture'\n    GROUP BY se.work_order, sed.item_code\n),\n\nconsumed_items AS (\n    SELECT  \n        se.work_order,\n        sed.item_code,\n        SUM(sed.qty) AS consumed_qty,\n        SUM(sed.qty * sed.valuation_rate) AS consumed_amount\n    FROM `tabStock Entry` se\n    JOIN `tabStock Entry Detail` sed ON sed.parent = se.name\n    WHERE se.purpose = 'Manufacture'\n    GROUP BY se.work_order, sed.item_code\n)\n\nSELECT\n    wo.name AS work_order,\n    wo.production_item,\n    wo.qty AS wo_qty,\n    wo.bom_no,\n\n    bi.item_code,\n\n    -- Per-Unit BOM\n    bi.bom_qty,\n    bi.bom_amount,\n\n    -- NEW: Total BOM Requirement based on WO Qty\n    (bi.bom_qty * wo.qty) AS total_bom_qty,\n    (bi.bom_amount * wo.qty) AS total_bom_amount,\n\n    -- Issued\n    ii.issued_qty,\n    ii.issued_amount,\n\n    -- Consumed\n    ci.consumed_qty,\n    ci.consumed_amount,\n\n    -- NEW: Variance using Total BOM Requirement\n    (IFNULL(ii.issued_qty, 0) - (bi.bom_qty * wo.qty)) AS issued_variance_qty,\n    (IFNULL(ii.issued_amount, 0) - (bi.bom_amount * wo.qty)) AS issued_variance_amount,\n\n    (IFNULL(ci.consumed_qty, 0) - (bi.bom_qty * wo.qty)) AS consumed_variance_qty,\n    (IFNULL(ci.consumed_amount, 0) - (bi.bom_amount * wo.qty)) AS consumed_variance_amount\n\nFROM `tabWork Order` wo\n\nLEFT JOIN bom_items bi \n    ON bi.bom_no = wo.bom_no\n\nLEFT JOIN issued_items ii\n    ON ii.work_order = wo.name AND ii.item_code = bi.item_code\n\nLEFT JOIN consumed_items ci\n    ON ci.work_order = wo.name AND ci.item_code = bi.item_code\n\nWHERE wo.docstatus = 1\nORDER BY wo.name, bi.item_code;\n",
+ "ref_doctype": "Work Order",
+ "report_name": "BoM Vs Actual Issue & Consumption",
+ "report_script": "# Updated Columns\ncolumns = [\n    {\"label\": \"\", \"fieldname\": \"indent\", \"fieldtype\": \"Int\", \"width\": 50},\n    {\"label\": \"Finished Good\", \"fieldname\": \"fg_item\", \"fieldtype\": \"Data\", \"width\": 180},\n    {\"label\": \"FG Serial No\", \"fieldname\": \"fg_serial_no\", \"fieldtype\": \"Link\", \"options\": \"Serial No\", \"width\": 150},\n    {\"label\": \"Raw Item\", \"fieldname\": \"rm_item\", \"fieldtype\": \"Data\", \"width\": 120},\n    {\"label\": \"Work Order\", \"fieldname\": \"work_order\", \"fieldtype\": \"Link\", \"options\": \"Work Order\", \"width\": 180},\n    {\"label\": \"Voucher Type\", \"fieldname\": \"voucher_type\", \"fieldtype\": \"Link\", \"options\": \"Stock Entry\", \"width\": 150},\n    \n    {\"label\": \"Voucher No\", \"fieldname\": \"voucher_no\", \"fieldtype\": \"Link\", \"options\": \"Stock Entry\", \"width\": 180},\n    {\"label\": \"Raw Material Serial No\", \"fieldname\": \"rm_serial_no\", \"fieldtype\": \"Data\", \"width\": 220},\n    {\"label\": \"Batch No\", \"fieldname\": \"batch_no\", \"fieldtype\": \"Link\", \"options\": \"Batch\", \"width\": 120},\n    {\"label\": \"Consumed Qty\", \"fieldname\": \"consumed_qty\", \"fieldtype\": \"Float\", \"precision\": 2, \"width\": 120},\n    {\"label\": \"Consumed Amount\", \"fieldname\": \"consumed_amount\", \"fieldtype\": \"Currency\", \"width\": 140},\n]\n\nconditions = []\nvalues = {}\n\n# No filter \u2192 empty data\nif not filters.get(\"serial_no\") and not (filters.get(\"from_date\") and filters.get(\"to_date\")):\n    data = columns, []\n\nelse:\n\n    # Priority 1 \u2192 Serial No\n    if filters.get(\"serial_no\"):\n        conditions.append(\"sed_fg.serial_no = %(serial_no)s\")\n        values[\"serial_no\"] = filters.get(\"serial_no\")\n\n    # Priority 2 \u2192 Date Range\n    else:\n        if filters.get(\"from_date\"):\n            conditions.append(\"se.posting_date >= %(from_date)s\")\n            values[\"from_date\"] = filters.get(\"from_date\")\n        if filters.get(\"to_date\"):\n            conditions.append(\"se.posting_date <= %(to_date)s\")\n            values[\"to_date\"] = filters.get(\"to_date\")\n\n    condition_sql = \" AND \".join(conditions)\n\n    query = f\"\"\"\n    SELECT\n        wo.name AS work_order,\n        \"Sock Entry\" AS voucher_type,\n        wo.production_item AS fg_item,\n        sed_fg.serial_no AS fg_serial_no,\n        se.name AS voucher_no,\n        sed_rm.item_code AS rm_item,\n        sed_rm.serial_no AS rm_serial_no,\n        sed_rm.batch_no,\n        ABS(sed_rm.qty) AS consumed_qty,\n        ABS(sed_rm.amount) AS consumed_amount\n    FROM `tabStock Entry` se\n    INNER JOIN `tabStock Entry Detail` sed_fg\n        ON sed_fg.parent = se.name\n       AND sed_fg.is_finished_item = 1\n    INNER JOIN `tabWork Order` wo\n        ON wo.name = se.work_order\n       AND wo.docstatus = 1\n    INNER JOIN `tabStock Entry Detail` sed_rm\n        ON sed_rm.parent = se.name\n       AND sed_rm.is_finished_item = 0\n    WHERE\n        se.docstatus = 1\n        AND se.purpose = 'Manufacture'\n        {f\"AND {condition_sql}\" if condition_sql else \"\"}\n    ORDER BY\n        sed_fg.serial_no,\n        sed_rm.item_code\n    \"\"\"\n\n    rows = frappe.db.sql(query, values, as_dict=1)\n\n    final_data = []\n    current_fg = None\n\n    for r in rows:\n        if r.fg_serial_no != current_fg:\n            final_data.append({\n                \"indent\": 0,\n                \"fg_item\": r.fg_item,\n                \"rm_item\": None,\n                \"fg_serial_no\": r.fg_serial_no,\n                \"work_order\": r.work_order,\n                \"voucher_no\": r.voucher_no,\n                \"voucher_type\": \"Stock Entry\"\n            })\n            current_fg = r.fg_serial_no\n\n        final_data.append({\n            \"indent\": 1,\n            \"fg_item\": None,\n            \"rm_item\": r.rm_item,\n            \"fg_serial_no\": None,\n            \"work_order\": r.work_order,\n            \"voucher_no\": r.voucher_no,\n            \"rm_serial_no\": r.rm_serial_no,\n            \"batch_no\": r.batch_no,\n            \"consumed_qty\": r.consumed_qty,\n            \"consumed_amount\": r.consumed_amount,\n            \"voucher_type\": \"Stcok Entry\"\n        })\n\n    data = columns, final_data\n",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Manufacturing Manager"
+  },
+  {
+   "role": "Manufacturing User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Manufacturing User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Manufacturing User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Manufacturing User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Manufacturing User"
+  },
+  {
+   "role": "Manufacturing User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Quality User"
+  },
+  {
+   "role": "Quality Manager"
+  },
+  {
+   "role": "Manufacturing User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Quality User"
+  },
+  {
+   "role": "Quality Manager"
+  },
+  {
+   "role": "Production Manager"
+  },
+  {
+   "role": "Daas Manager"
+  }
+ ],
+ "timeout": 0
+}

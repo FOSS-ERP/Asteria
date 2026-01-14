@@ -64,8 +64,8 @@ def on_submit(self, method):
                 
                 serial_no = get_auto_data(**args) or []
                 sr_list = [d.get("serial_no") for d in serial_no if d.get("serial_no")]
-
-                if serial_no and row.qty != len(sr_list):
+               
+                if sr_list and row.qty != len(sr_list):
                     row.qty = len(sr_list)
                     
                 if sr_list: 
@@ -74,6 +74,8 @@ def on_submit(self, method):
                     row.serial_no = serial_no_list
 
             doc.flags.ignore_permissions=True
+            doc.flags.ignore_mandatory=True
+            
             doc.save()
 
             frappe.msgprint("Stock Entry is successfully created. {0}".format(frappe.utils.get_link_to_form("Stock Entry", se.name)))

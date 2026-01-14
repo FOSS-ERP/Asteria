@@ -160,7 +160,8 @@ doc_events = {
 		"validate" : "asteria.asteria.doc_events.employee_advance.validate"
 	},
 	"Job Card": {
-		"on_submit": "asteria.asteria.doc_events.job_card.on_submit"
+		"on_submit": "asteria.asteria.doc_events.job_card.on_submit",
+		"validate" : "asteria.asteria.doc_events.job_card.validate"
 	},
 	"Quality Inspection": {
 		"validate" : "asteria.asteria.doc_events.quality_inspection.validate"

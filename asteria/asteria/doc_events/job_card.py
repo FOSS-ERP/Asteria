@@ -109,3 +109,12 @@ def create_stock_entry(source_name, target_doc=None):
         })
 
     return doclist
+
+
+def validate(self, method):
+    fetch_non_conformance(self)
+
+def fetch_non_conformance(self):
+    if self.for_job_card:
+        if non_conformance := frappe.db.exists("Non Conformance", {"custom_job_card_number" : self.for_job_card}):
+            self.non_conformance = non_conformance

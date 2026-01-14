@@ -154,6 +154,16 @@ def setup_custom_fields():
                 "insert_after" : "last_payment_date",
                 "reqd" : 0 
             }
+        ],
+        "Job Card" : [
+            {
+                "label" : "Non Conformance",
+                "fieldname" : "non_conformance",
+                "fieldtype" : "Link",
+                "options": "Non Conformance",
+                "insert_after" : "total_completed_qty",
+                "read_only" : 1  
+            }
         ]
         
     }

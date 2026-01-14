@@ -137,9 +137,9 @@ after_migrate = "asteria.asteria.create_custom_field.setup_custom_fields"
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
-# 	"Stock Entry": "asteria.asteria.override.stock_entry.CustomStockEntry"
-# }
+override_doctype_class = {
+	"Work Order": "asteria.asteria.override.work_order.CustomWorkOrder"
+}
 
 # Document Events
 # ---------------

@@ -118,11 +118,41 @@ def setup_custom_fields():
         ],
         "Payment Request" : [
             {
+                "label" : "Payment Need Date",
+                "fieldname" : "custom_payment_need_date",
+                "fieldtype" : "Date",
+                "insert_after" : "company",
+                "reqd" : 0  
+            },
+            {
                 "label" : "Payment Aging (In Days)",
                 "fieldname" : "payment_aging",
                 "fieldtype" : "Data",
-                "insert_after" : "mode_of_payment",
+                "insert_after" : "custom_payment_need_date",
                 "reqd" : 0  
+            },
+            {
+                "label" : "Last Payment Date",
+                "fieldname" : "last_payment_date",
+                "fieldtype" : "Date",
+                "insert_after" : "payment_aging",
+                "reqd" : 0 ,
+                "allow_on_submit" : 1
+            },
+            {
+                "label" : "Full Payment Date",
+                "fieldname" : "full_payment_date",
+                "fieldtype" : "Date",
+                "insert_after" : "payment_request_type",
+                "reqd" : 0 ,
+                "allow_on_submit" : 0
+            },
+            {
+                "label" : "Payment Aging Based on Last Payment Date",
+                "fieldname" : "payment_aging_based_last_payment",
+                "fieldtype" : "Int",
+                "insert_after" : "last_payment_date",
+                "reqd" : 0 
             }
         ]
         

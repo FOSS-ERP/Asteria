@@ -54,7 +54,7 @@ from frappe.utils import getdate
 def set_payment_aging_for_payment_request():
     payment_request_list = frappe.db.get_list(
         "Payment Request",
-        {"status": "Initiated"},
+        {"status": ["!=", "Paid"]},
         pluck="name"
     )
 
@@ -63,22 +63,61 @@ def set_payment_aging_for_payment_request():
 
         if doc.custom_payment_need_date:
             # date difference
-            diff_days = (getdate(doc.custom_payment_need_date) - getdate()).days
+            diff_date =  doc.custom_payment_need_date
+            diff_days = (getdate(diff_date) - getdate()).days
 
             # only store when less than 0
             if diff_days < 0:
-                frappe.db.set_value("Payment Request", pr, "payment_aging", abs(diff_days))
+                frappe.db.set_value("Payment Request", pr, "payment_aging", abs(diff_days), update_modified=False)
             else:
-                frappe.db.set_value("Payment Request", pr, "payment_aging", 0)
+                frappe.db.set_value("Payment Request", pr, "payment_aging", 0, update_modified=False)
+
+        if doc.last_payment_date:
+            diff_date =  doc.last_payment_date
+            diff_days = (getdate(diff_date) - getdate()).days
+
+            # only store when less than 0
+            if diff_days < 0:
+                frappe.db.set_value("Payment Request", pr, "payment_aging_based_last_payment", abs(diff_days), update_modified=False)
+            else:
+                frappe.db.set_value("Payment Request", pr, "payment_aging_based_last_payment", 0, update_modified=False)
 
 
-def update_aging_in_pr(self, method):
-    diff_days = (getdate(self.custom_payment_need_date) - getdate()).days
+def update_aging_in_pr(self, method = None):
+    if self.status == "Paid":
+        return
 
-    if diff_days < 0:
-        self.payment_aging = abs(diff_days)
+    last_payment_date = self.last_payment_date
+    custom_payment_need_date = self.custom_payment_need_date
+
+    diff_days_base1 = (getdate(custom_payment_need_date) - getdate()).days
+    diff_days_base2 = (getdate(last_payment_date) - getdate()).days
+
+    if diff_days_base1 < 0:
+        self.payment_aging = abs(diff_days_base1)
     else:
         self.payment_aging = 0
+    
+    if diff_days_base2 < 0:
+        self.payment_aging_based_last_payment = abs(diff_days_base2)
+    else:
+        self.payment_aging_based_last_payment = 0
+    
+    if method == "on_update_after_submit":
+        if self.status == "Paid" and not self.full_payment_date:
+            frappe.db.set_value("Payment Request", self.name, "full_payment_date", today(), update_modified=False)
+
+        if diff_days_base1 < 0:
+            payment_aging = abs(diff_days_base1)
+            frappe.db.set_value("Payment Request", self.name, "payment_aging", payment_aging, update_modified=False)
+        else:
+            frappe.db.set_value("Payment Request", self.name, "payment_aging", 0, update_modified=False)
+        
+        if diff_days_base2 < 0:
+            payment_aging = abs(diff_days_base2)
+            frappe.db.set_value("Payment Request", self.name, "payment_aging_based_last_payment", payment_aging, update_modified=False)
+        else:
+            frappe.db.set_value("Payment Request", self.name, "payment_aging_based_last_payment", 0, update_modified=False)
 
 
 

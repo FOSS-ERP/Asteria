@@ -166,7 +166,11 @@ doc_events = {
 		"validate" : "asteria.asteria.doc_events.quality_inspection.validate"
 	},
 	"Payment Request" : {
-		"validate" : "asteria.asteria.api.update_aging_in_pr"
+		"validate" : "asteria.asteria.api.update_aging_in_pr",
+		"on_update_after_submit" : "asteria.asteria.api.update_aging_in_pr"
+	},
+	"Payment Entry" : {
+		"on_submit" : "asteria.asteria.doc_events.payment_entry.on_submit"
 	}
 }
 

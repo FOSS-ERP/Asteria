@@ -12,8 +12,19 @@ frappe.pages['payment-run'].on_page_load = function(wrapper) {
 		options: "Purchase Order\nPurchase Invoice\nExpense Claim",
 		default: "Purchase Order",
 		onchange:()=>{
+			page.fields_dict.document_name.df.options = page.fields_dict.document_type.get_value()
 			frappe.payment_run.run(page);
 			toggle_date_filters(page)
+		}
+	});
+
+	page.document_name = page.add_field({
+		fieldname: 'document_name',
+		label: __('Document Name'),
+		fieldtype: 'Link',
+		options: page.fields_dict.document_type.get_value(),
+		onchange:()=>{
+			frappe.payment_run.run(page);
 		}
 	});
 
@@ -118,6 +129,7 @@ frappe.payment_run = {
 			// Call Python API
 			let document_type = me.page.fields_dict.document_type.get_value();
 			let bank_account = me.page.fields_dict.bank_account.get_value();
+			
 			if (!bank_account){
 				frappe.throw("Bank Account is not selected")
 			}
@@ -189,6 +201,7 @@ frappe.payment_run = {
 		if (sort_icon) {
 			OrderBy = sort_icon.getAttribute("data-order-type");
 		}
+		let document_name = me.page.fields_dict.document_name.get_value();
 	
 		frappe.call({
 			method: 'asteria.asteria.page.payment_run.get_entries',
@@ -200,6 +213,7 @@ frappe.payment_run = {
 				supplier: supplier,
 				orderby : OrderBy,
 				employee : employee,
+				document_name:  document_name
 			},
 			freeze:true,
 			freeze_message: __("Loading ......"),

@@ -22,13 +22,17 @@ from erpnext.utilities import payment_app_import_guard
 from frappe.core.doctype.session_default_settings.session_default_settings import get_session_default_values
 
 @frappe.whitelist()
-def get_entries(document_type, due_date=None, from_date=None, to_date=None, supplier=None, orderby=None, employee=None):
+def get_entries(document_type, due_date=None, from_date=None, to_date=None, supplier=None, orderby=None, employee=None, document_name=None):
 	if not orderby or orderby == None or orderby == '':
 		orderby = "DESC"
 
 	condition = ''
 	if employee:
 		condition = f" and ec.employee = '{employee}'"
+	
+	if document_name:
+		condition += f"ec.name = {document_name}"
+
 	if document_type == "Expense Claim":
 		data = frappe.db.sql(f"""
 				Select 
@@ -59,6 +63,8 @@ def get_entries(document_type, due_date=None, from_date=None, to_date=None, supp
 		filter += f" and pi.posting_date <= '{to_date}'"
 	if supplier:
 		filter += f" and pi.supplier = '{supplier}'"
+	if document_name:
+		filter += f" and pi.name = '{document_name}'"
 	
 
 	if document_type == "Purchase Invoice":		
@@ -87,6 +93,8 @@ def get_entries(document_type, due_date=None, from_date=None, to_date=None, supp
 		filter += f" and transaction_date >= '{from_date}'"
 	if to_date:
 		filter += f" and transaction_date <= '{to_date}'"
+	if document_name:
+		filter += f" and po.name = '{document_name}'"
 
 	if document_type == "Purchase Order":
 		data = frappe.db.sql(f""" 

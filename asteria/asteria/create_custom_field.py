@@ -164,6 +164,16 @@ def setup_custom_fields():
                 "insert_after" : "total_completed_qty",
                 "read_only" : 1  
             }
+        ],
+        "Material Request" : [
+            {
+                "label" : "Reference Material Request",
+                "fieldname" : "reference_mr",
+                "fieldtype" : "Link",
+                "options": "Material Request",
+                "insert_after" : "company",
+                "allow_on_submit" : 1
+            }
         ]
         
     }

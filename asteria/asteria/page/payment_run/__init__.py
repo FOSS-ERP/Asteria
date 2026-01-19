@@ -193,6 +193,14 @@ def create_payment_entry(reference_doctype, reference_name, bank_account, submit
 		}
 	)
 
+	if payment_request := frappe.db.exists("Payment Request", {
+		"reference_doctype" : reference_doctype,
+		"reference_name" :  reference_name
+	}):
+		pr_doc = frappe.get_doc("Payment Request", payment_request)
+		# Allocate payment_request for each reference in payment_entry (Payment Term can splits the row)
+		pr_doc._allocate_payment_request_to_pe_references(references=payment_entry.references)
+
 	# # Update 'Paid Amount' on Forex transactions
 	# if self.currency != ref_doc.company_currency:
 	# 	if (

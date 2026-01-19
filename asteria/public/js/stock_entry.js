@@ -253,6 +253,8 @@ frappe.ui.form.on("Stock Entry", {
                 );
             });
         }
+
+        // copy from stock_entry.js need to compare before version update /apps/erpnext/erpnext/stock/doctype/stock_entry/stock_entry.js
         if (!frm.doc.docstatus) {
             frm.remove_custom_button("Material Request", "Create");
 			frm.add_custom_button(
@@ -287,5 +289,6 @@ frappe.ui.form.on("Stock Entry", {
 				__("Create")
 			);
 		}
+        // Copy content end /apps/erpnext/erpnext/stock/doctype/stock_entry/stock_entry.js
     }
 });

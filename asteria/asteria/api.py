@@ -153,3 +153,32 @@ def create_production_plan(source_name, target_doc=None):
 
     doc.get_items()
     return doc
+
+@frappe.whitelist()
+def make_purchase_material_request(source_name, target_doc=None):
+    def postprocess(source, target, source_parent):
+        target.material_request_type = "Purchase"
+        target.reference_mr = source_name
+    
+    def update_item(source, target, source_parent):
+        remaining_qty = (source.qty or 0) - (source.ordered_qty or 0)
+        target.qty = remaining_qty
+
+    doc = get_mapped_doc(
+        "Material Request",
+        source_name,
+        {
+            "Material Request": {
+                "doctype": "Material Request",
+                "postprocess": postprocess,
+                "validation": {"docstatus": ["=", 1]},
+            },
+            "Material Request Item": {
+                "doctype": "Material Request Item",
+                "postprocess": update_item,
+                "condition": lambda source: (source.qty or 0) > (source.ordered_qty or 0),
+            },
+        },
+        target_doc
+    )
+    return doc

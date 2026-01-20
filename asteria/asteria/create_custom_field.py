@@ -157,12 +157,11 @@ def setup_custom_fields():
         ],
         "Job Card" : [
             {
-                "label" : "Non Conformance",
-                "fieldname" : "non_conformance",
-                "fieldtype" : "Link",
-                "options": "Non Conformance",
-                "insert_after" : "total_completed_qty",
-                "read_only" : 1  
+                "label": "Non Conformance Table",
+                "fieldname": "non_conformance_table",
+                "insert_after": "total_completed_qty",
+                "fieldtype": "Table MultiSelect",
+                "options": "Table Non Conformance",
             }
         ],
         "Material Request" : [
@@ -180,3 +179,6 @@ def setup_custom_fields():
     
     create_custom_fields(custom_fields)
     print("Custom Fields for Referral Practitioner Integration created successfully") 
+
+    if frappe.get_meta("Job Card").has_field("non_conformance"):
+        frappe.db.delete("Custom Field", "Job Card-non_conformance")

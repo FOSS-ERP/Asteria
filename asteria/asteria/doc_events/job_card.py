@@ -116,5 +116,13 @@ def validate(self, method):
 
 def fetch_non_conformance(self):
     if self.for_job_card:
-        if non_conformance := frappe.db.exists("Non Conformance", {"custom_job_card_number" : self.for_job_card}):
-            self.non_conformance = non_conformance
+        if non_conformances := frappe.db.get_list("Non Conformance", {"custom_job_card_number" : self.for_job_card}, pluck="name"):
+            current_data = [
+                d.non_conformance for d in self.non_conformance_table
+            ]
+            
+            for row in non_conformances:
+                if row not in current_data:
+                    self.append("non_conformance_table", {
+                        "non_conformance" : row
+                    })

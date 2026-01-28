@@ -82,7 +82,7 @@ def get_conditions(filters):
         (
             (se.purpose != 'Material Issue' AND se.work_order = %(work_order)s)
             OR
-            (se.purpose = 'Material Issue' AND se.custom_work_order_mfg = %(work_order)s)
+            (se.purpose = 'Material Issue' AND se.work_order = %(work_order)s)
         )
         """)
         values["work_order"] = filters.get("work_order")
@@ -114,7 +114,7 @@ def get_rows(condition_sql, values):
             se.name AS voucher_no,
             # se.work_order,
             CASE 
-                WHEN se.purpose = 'Material Issue' THEN se.custom_work_order_mfg
+                WHEN se.purpose = 'Material Issue' THEN se.work_order
                 ELSE se.work_order
             END AS work_order,
             se.stock_entry_type,
@@ -154,7 +154,7 @@ def get_rows(condition_sql, values):
         #     ON wo.name = se.work_order AND wo.docstatus = 1
         INNER JOIN `tabWork Order` wo
             ON wo.name = CASE 
-                            WHEN se.purpose = 'Material Issue' THEN se.custom_work_order_mfg
+                            WHEN se.purpose = 'Material Issue' THEN se.work_order
                             ELSE se.work_order
                         END
             AND wo.docstatus = 1
@@ -198,7 +198,7 @@ def add_transferred_qty(rows):
     transfer_data = frappe.db.sql("""
         SELECT
             CASE 
-                WHEN se.purpose = 'Material Issue' THEN se.custom_work_order_mfg
+                WHEN se.purpose = 'Material Issue' THEN se.work_order
                 ELSE se.work_order
             END AS work_order_key,
             sed.item_code,
@@ -210,7 +210,7 @@ def add_transferred_qty(rows):
             se.docstatus = 1
             AND se.purpose = 'Material Issue'
             AND (
-                se.work_order IN %(work_orders)s OR se.custom_work_order_mfg IN %(work_orders)s
+                se.work_order IN %(work_orders)s OR se.work_order IN %(work_orders)s
             )
             AND sed.item_code IN %(items)s
         GROUP BY work_order_key, sed.item_code
@@ -313,7 +313,7 @@ def build_tree(rows, bom_cache):
             FROM `tabStock Entry` se
             INNER JOIN `tabStock Entry Detail` sed ON sed.parent = se.name
             WHERE se.docstatus = 1
-            AND (se.work_order = %(wo)s OR se.custom_work_order_mfg = %(wo)s)
+            AND (se.work_order = %(wo)s OR se.work_order = %(wo)s)
         """, {"wo": fg.work_order}, as_dict=True)
 
         consumed_qty_fg = (cons[0].fg_qty or 0) + (cons[0].raw_material_qty or 0)

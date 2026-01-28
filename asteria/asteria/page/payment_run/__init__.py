@@ -69,7 +69,7 @@ def get_entries(document_type, due_date=None, from_date=None, to_date=None, supp
 
 	if document_type == "Purchase Invoice":		
 		data = frappe.db.sql(f""" 
-				Select pi.name as document_name, pi.grand_total, pi.supplier, pi.supplier_name, pi.posting_date, pi.status, pi.outstanding_amount, pi.currency, pi.due_date
+				Select pi.name as document_name, pi.grand_total, pi.rounded_total, pi.supplier, pi.supplier_name, pi.posting_date, pi.status, pi.outstanding_amount, pi.currency, pi.due_date
 				From `tabPurchase Invoice` as pi
 				Where pi.docstatus = 1 and pi.status != 'Paid' and pi.is_return != 1 {filter} AND NOT EXISTS (
 					SELECT per.name 
@@ -82,9 +82,13 @@ def get_entries(document_type, due_date=None, from_date=None, to_date=None, supp
 				Order By pi.posting_date {orderby}
 		""",as_dict=1)
 		for row in data:
+			if row.rounded_total:
+				grand_total = row.rounded_total
+			else:
+				grand_total = row.grand_total
 			row.update({
 				"outstanding_amount" : frappe.utils.fmt_money(row.outstanding_amount, currency=row.currency),
-				"grand_total" : frappe.utils.fmt_money(row.grand_total, currency=row.currency)
+				"grand_total" : frappe.utils.fmt_money(grand_total, currency=row.currency)
 			})
 		return { "data" : data , "document_type" : document_type }
 
@@ -98,7 +102,7 @@ def get_entries(document_type, due_date=None, from_date=None, to_date=None, supp
 
 	if document_type == "Purchase Order":
 		data = frappe.db.sql(f""" 
-				Select po.name as document_name, po.grand_total, po.supplier, po.supplier_name, po.transaction_date as posting_date, po.status, po.advance_paid, po.currency
+				Select po.name as document_name, po.grand_total, po.rounded_total, po.supplier, po.supplier_name, po.transaction_date as posting_date, po.status, po.advance_paid, po.currency
 				From `tabPurchase Order` as po
 				Where po.docstatus = 1 and po.status not in ('Completed', 'Closed') and po.grand_total > po.advance_paid and (po.grand_total - po.advance_paid) > 1 
 				and po.per_billed = 0
@@ -112,8 +116,12 @@ def get_entries(document_type, due_date=None, from_date=None, to_date=None, supp
 				Order By po.transaction_date {orderby}
 		""",as_dict=1)
 		for row in data:
+			if row.rounded_total:
+				grand_total = row.rounded_total
+			else:
+				grand_total = row.grand_total
 			row.update({
-				"grand_total" : frappe.utils.fmt_money(row.grand_total, currency=row.currency),
+				"grand_total" : frappe.utils.fmt_money(grand_total, currency=row.currency),
 				"advance_paid" : frappe.utils.fmt_money(row.advance_paid, currency=row.currency)
 			})
 
@@ -153,14 +161,16 @@ def create_payment_entry(reference_doctype, reference_name, bank_account, submit
 	if reference_doctype == "Purchase Invoice":
 		party_amount = bank_amount = ref_doc.outstanding_amount
 	if reference_doctype == "Purchase Order":
-		party_amount = bank_amount = ref_doc.grand_total - ref_doc.advance_paid
+		grand_total = ref_doc.rounded_total or ref_doc.grand_total
+		party_amount = bank_amount = grand_total - ref_doc.advance_paid
 
 	if party_account_currency == ref_doc.company_currency and party_account_currency != ref_doc.currency:
 		exchange_rate = ref_doc.get("conversion_rate")
 		if reference_doctype == "Purchase Invoice":
 			bank_amount = flt(ref_doc.outstanding_amount / exchange_rate, ref_doc.precision("grand_total"))
 		if reference_doctype == "Purchase Order":
-			bank_amount = flt((ref_doc.grand_total - ref_doc.advance_paid) / exchange_rate, ref_doc.precision("grand_total"))
+			grand_total = ref_doc.rounded_total or ref_doc.grand_total
+			bank_amount = flt((grand_total - ref_doc.advance_paid) / exchange_rate, ref_doc.precision("grand_total"))
 
 	# outstanding amount is already in Part's account currency
 	payment_entry = get_payment_entry(

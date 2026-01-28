@@ -11,4 +11,7 @@ class H2HLog(Document):
 	def autoname(self):
 		prefix = f"PAY-H2H-LOG-{self.log_type}-.#####"
 		self.name = make_autoname(prefix)
+	
+	def validate(self):
+		self.total_no_of_payments = len(self.vendor_payment_processor)
 

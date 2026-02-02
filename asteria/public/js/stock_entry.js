@@ -282,6 +282,8 @@ frappe.ui.form.on("Stock Entry", {
 							mr_item.qty = item.qty;
 							mr_item.warehouse = item.s_warehouse;
 							mr_item.required_date = frappe.datetime.nowdate();
+                            mr_item.material_request = item.material_request; //changes by fosserp
+                            mr_item.material_request_item = item.material_request_item; //chnages by fosserp
 						});
 						frappe.set_route("Form", "Material Request", mr.name);
 					});

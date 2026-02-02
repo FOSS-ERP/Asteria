@@ -174,6 +174,9 @@ doc_events = {
 	},
 	"Payment Entry" : {
 		"on_submit" : "asteria.asteria.doc_events.payment_entry.on_submit"
+	},
+	"Material Request" : {
+		"on_submit" : "asteria.asteria.doc_events.material_request.on_submit"
 	}
 }
 

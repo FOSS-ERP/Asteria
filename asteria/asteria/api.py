@@ -1,7 +1,7 @@
 import frappe
 import re
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import getdate
+from frappe.utils import getdate, get_link_to_form
 
 @frappe.whitelist()
 @frappe.validate_and_sanitize_search_inputs
@@ -161,7 +161,26 @@ def make_purchase_material_request(source_name, target_doc=None):
         target.reference_mr = source_name
     
     def update_item(source, target, source_parent):
-        remaining_qty = (source.qty or 0) - (source.ordered_qty or 0)
+        other_ref = frappe.db.sql(f"""
+                        Select sum(mri.qty) as qty
+                        From `tabMaterial Request Item` as mri 
+                        Left Join `tabMaterial Request` as mr ON mr.name = mri.parent
+                        Where 
+                            mri.material_request_item = '{source.name}' and 
+                            mr.status not in ('Cancelled', 'Received')
+                        Group By mri.name
+            """, as_dict=1)
+
+        request_for_purchase = 0
+        if other_ref:
+            pr_mr_qty = other_ref[0].qty
+            if  source.qty <= pr_mr_qty + source.ordered_qty:
+                message = f"{source.ordered_qty} qty is already issue and {pr_mr_qty} requested for purchase."
+                message += f"<br><br><p><b>Raw #{source.idx}:</b> Not allowed to order and issue more then {source.qty}.</p>"
+                frappe.throw(message)
+            request_for_purchase = pr_mr_qty
+
+        remaining_qty = (source.qty or 0) - (source.ordered_qty or 0) - (request_for_purchase or 0)
         target.qty = remaining_qty
 
     doc = get_mapped_doc(
@@ -176,7 +195,11 @@ def make_purchase_material_request(source_name, target_doc=None):
             "Material Request Item": {
                 "doctype": "Material Request Item",
                 "postprocess": update_item,
-                "condition": lambda source: (source.qty or 0) > (source.ordered_qty or 0),
+                # "condition": lambda source: (source.qty or 0) > (source.ordered_qty or 0),
+                "field_map" : {
+                    "name" : "material_request_item",
+                    "parent" : "material_request"
+                }
             },
         },
         target_doc

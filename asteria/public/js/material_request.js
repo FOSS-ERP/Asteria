@@ -1,6 +1,6 @@
 frappe.ui.form.on("Material Request", {
     refresh(frm) {
-        if (!frm.doc.__islocal) {
+        if (!frm.doc.__islocal && frm.doc.material_request_type != 'Purchase') {
             frm.add_custom_button(
                 __("Material Request (Purchase)"),
                 function () {

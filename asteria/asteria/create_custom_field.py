@@ -173,6 +173,32 @@ def setup_custom_fields():
                 "insert_after" : "company",
                 "allow_on_submit" : 1
             }
+        ],
+        "Material Request Item" : [
+            {
+                "label" : "Material Request Item",
+                "fieldname" : "material_request_item",
+                "fieldtype" : "Data",
+                "insert_after" : "lead_time_date",
+                "hidden" : 1,
+                "no_copy" : 1
+            },
+            {
+                "label" : "Material Request",
+                "fieldname" : "material_request",
+                "fieldtype" : "Data",
+                "insert_after" : "material_request_item",
+                "hidden" : 1,
+                "no_copy" : 1
+            },
+            {
+                "label" : "Against Purchase",
+                "fieldname" : "against_purchase",
+                "fieldtype" : "Float",
+                "insert_after" : "projected_qty",
+                "hidden" : 0,
+                "no_copy" : 1
+            }
         ]
         
     }

@@ -3,7 +3,8 @@ from erpnext.stock.doctype.serial_and_batch_bundle.serial_and_batch_bundle impor
 	get_auto_batch_nos,
 	get_reserved_serial_nos,
 	get_serial_nos_based_on_posting_date,
-	get_non_expired_batches
+	get_non_expired_batches,
+	get_serial_nos_based_on_filters
 )
 from frappe.utils import parse_json, cint, get_link_to_form
 from frappe import _
@@ -80,6 +81,7 @@ def get_available_serial_nos(kwargs):
 				) t
 				WHERE t.rn = 1
 				ORDER BY posting_datetime DESC
+				{limit}
 			""", as_dict=1)
 
 			
@@ -125,6 +127,8 @@ def get_available_serial_nos(kwargs):
 		filters["name"] = ("in", time_based_serial_nos)
 	elif ignore_serial_nos:
 		filters["name"] = ("not in", ignore_serial_nos)
+	elif kwargs.get("serial_nos"):
+		filters["name"] = ("in", kwargs.get("serial_nos"))
 
 	if kwargs.get("batches"):
 		batches = get_non_expired_batches(kwargs.get("batches"))
@@ -133,13 +137,7 @@ def get_available_serial_nos(kwargs):
 
 		filters["batch_no"] = ("in", batches)
 
-	return frappe.get_all(
-		"Serial No",
-		fields=fields,
-		filters=filters,
-		limit=cint(kwargs.qty) or 10000000,
-		order_by=order_by,
-	)
+	return get_serial_nos_based_on_filters(filters, fields, order_by, kwargs)
 
 
 def validate(self, method):

@@ -31,6 +31,7 @@ class CustomWorkOrder(WorkOrder):
 
         data = query.run(as_dict=1) or []
 
+        # fosserp changes
         transferred_items = frappe._dict()
 
         for d in data:
@@ -45,6 +46,7 @@ class CustomWorkOrder(WorkOrder):
             elif d.t_warehouse == wip_warehouse and d.s_warehouse != wip_warehouse:
                 transferred_items[key] = transferred_items.get(key, 0) + qty
 
+        # fosserp changes end
         for row in self.required_items:
             row.db_set(
                 "transferred_qty",

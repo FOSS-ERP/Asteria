@@ -7,6 +7,7 @@
 import frappe
 from frappe import _
 from erpnext.manufacturing.doctype.bom.bom import get_bom_items_as_dict
+from frappe.utils import flt
 
 
 def execute(filters=None):
@@ -397,8 +398,7 @@ def build_tree(rows, bom_cache):
 
             variance_consumption_qty = consumed_qty - bom_qty
             variance_consumption_value = variance_consumption_qty * r["rate"]
-
-            data.append({
+            prepared_data = {
                 "indent": 1,
                 "sales_order": fg.sales_order,
                 "delivery_date": fg.delivery_date,
@@ -430,7 +430,42 @@ def build_tree(rows, bom_cache):
                 "variance_consumption_qty": variance_consumption_qty,
                 "variance_consumption_value": variance_consumption_value,
                 "consumed_minus_bom_amount": consumed_value - bom_amount,
-            })
+            }
+            
+
+            if not item_code or not fg.work_order:
+                continue
+
+            sr_details = frappe.db.sql(f"""
+                                Select sle.name, 
+                                    sle.incoming_rate, 
+                                    sle.has_serial_no, 
+                                    sle.item_code,
+                                    sle.actual_qty,
+                                    sle.qty_after_transaction,
+                                    sle.posting_date, 
+                                    sle.valuation_rate
+                                From `tabStock Reconciliation` as sr
+                                Left Join  `tabStock Ledger Entry` as sle ON sle.voucher_no = sr.name
+                                Where sle.is_cancelled = 0 and sr.work_order = '{fg.work_order}' and sle.item_code = '{item_code}'
+                        """, as_dict=1)
+
+            if sr_details:
+                if len(sr_details) == 1:
+                    sle_data = [abs(flt(row.actual_qty)) for row in sr_details]
+                else:
+                    sle_data = [abs(flt(row.actual_qty)) for row in sr_details if row.actual_qty < 0]
+                frappe.log_error(item_code, sle_data)
+                if sle_data:
+                    # frappe.log_error("sum log",prepared_data.get("transferred_qty") - abs(sum(sle_data)))
+                    prepared_data.update({
+                        "transferred_qty" : prepared_data.get("transferred_qty") - abs(sum(sle_data))
+                    })
+                    
+            
+            data.append(prepared_data)
+            
+
 
     return data
 

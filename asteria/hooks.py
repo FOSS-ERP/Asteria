@@ -207,7 +207,8 @@ scheduler_events = {
 #
 override_whitelisted_methods = {
 	"erpnext.stock.doctype.serial_and_batch_bundle.serial_and_batch_bundle.get_auto_data": "asteria.asteria.override.serial_and_batch_bundle.get_auto_data",
-	"hrms.overrides.employee_payment_entry.get_payment_entry_for_employee" : "asteria.asteria.override.employee_payment_entry.get_payment_entry_for_employee"
+	"hrms.overrides.employee_payment_entry.get_payment_entry_for_employee" : "asteria.asteria.override.employee_payment_entry.get_payment_entry_for_employee",
+	"erpnext.manufacturing.doctype.job_card.job_card.make_corrective_job_card" : "asteria.asteria.doc_events.job_card.make_corrective_job_card"
 }
 #
 # each overriding function accepts a `data` argument;

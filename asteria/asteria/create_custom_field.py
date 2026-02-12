@@ -105,6 +105,22 @@ def setup_custom_fields():
                 "fieldtype" : "Int",
                 "insert_after" : "warranty_period",
                 "reqd" : 0 
+            },
+            {
+                "label" : "is Kit Item?",
+                "fieldname" : "is_kit_item",
+                "fieldtype" : "Check",
+                "insert_after" : "has_variants",
+                "reqd" : 0 
+            },
+            {
+                "label" : "Parent Item",
+                "fieldname" : "parent_item",
+                "fieldtype" : "Link",
+                "insert_after" : "is_kit_item",
+                "options" : "Item",
+                "mandatory_depends_on" : "eval:doc.is_kit_item == 1;",
+                "depends_on" : "eval:doc.is_kit_item == 1;",
             }
         ],
         "Batch" : [

@@ -459,8 +459,18 @@ def build_tree(rows, bom_cache):
                 if sle_data:
                     # frappe.log_error("sum log",prepared_data.get("transferred_qty") - abs(sum(sle_data)))
                     prepared_data.update({
-                        "transferred_qty" : prepared_data.get("transferred_qty") - abs(sum(sle_data))
+                        "transferred_qty" : final_qty,
+                        "transferred_value" : final_qty * sr_details[0].get("valuation_rate"),
+                        "consumed_qty": final_qty,
+                        "consumed_value": final_qty * sr_details[0].get("valuation_rate"),
+                        "transferred_rate" : sr_details[0].get("valuation_rate"),
+                       
+                        "consumed_rate": sr_details[0].get("valuation_rate"),
+                        
                     })
+
+
+                    
                     
             
             data.append(prepared_data)

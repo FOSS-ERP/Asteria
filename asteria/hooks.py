@@ -140,7 +140,8 @@ after_migrate = "asteria.asteria.create_custom_field.setup_custom_fields"
 # Override standard doctype classes
 
 override_doctype_class = {
-	"Work Order": "asteria.asteria.override.work_order.CustomWorkOrder"
+	"Work Order": "asteria.asteria.override.work_order.CustomWorkOrder",
+	# "Production Plan" : "asteria.asteria.override.production_plan.CustomProductionPlan"
 }
 
 # Document Events
@@ -207,8 +208,10 @@ scheduler_events = {
 #
 override_whitelisted_methods = {
 	"erpnext.stock.doctype.serial_and_batch_bundle.serial_and_batch_bundle.get_auto_data": "asteria.asteria.override.serial_and_batch_bundle.get_auto_data",
-	"hrms.overrides.employee_payment_entry.get_payment_entry_for_employee" : "asteria.asteria.override.employee_payment_entry.get_payment_entry_for_employee"
-}
+	"hrms.overrides.employee_payment_entry.get_payment_entry_for_employee" : "asteria.asteria.override.employee_payment_entry.get_payment_entry_for_employee",
+	"erpnext.manufacturing.doctype.job_card.job_card.make_corrective_job_card" : "asteria.asteria.doc_events.job_card.make_corrective_job_card",
+	"erpnext.manufacturing.doctype.production_plan.production_plan.get_items_for_material_requests" : "asteria.asteria.doc_events.production_plan.get_items_for_material_requests"
+ }
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,

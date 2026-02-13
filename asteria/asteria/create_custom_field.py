@@ -218,7 +218,7 @@ def setup_custom_fields():
         ],
         "Employee Advance" : [
             {
-                "label" : "Custom Status",
+                "label" : "Payment Status",
                 "fieldname" : "custom_status",
                 "fieldtype" : "Data",
                 "read_only" : 1,

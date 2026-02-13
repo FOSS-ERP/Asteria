@@ -215,6 +215,16 @@ def setup_custom_fields():
                 "hidden" : 0,
                 "no_copy" : 1
             }
+        ],
+        "Employee Advance" : [
+            {
+                "label" : "Payment Status",
+                "fieldname" : "custom_status",
+                "fieldtype" : "Data",
+                "read_only" : 1,
+                "no_copy" : 1,
+                "in_list_view" : 1
+            }
         ]
         
     }

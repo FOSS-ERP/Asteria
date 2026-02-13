@@ -8,3 +8,4 @@ asteria.patches.create_field_se_notification
 asteria.patches.create_field_stock_settings
 asteria.patches.create_custom_field_stock_entry
 asteria.patches.update_total_no_of_payments
+asteria.patches.update_custom_status

@@ -182,7 +182,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
         if not phone:
             frappe.throw(f"Phone no is not available for {get_link_to_form(party_type, pe_doc.party)}")
         if not address.get("pincode"):
-            frappe.throw(f"Pincode is missing in address details of supplier {get_link_to_form(party_type, party)}")
+            frappe.throw(f"Pincode is missing in address details of supplier {get_link_to_form(party_type, pe_doc.party)}")
         
 
         # Identifier details

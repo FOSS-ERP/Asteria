@@ -9,7 +9,7 @@ frappe.pages['h2h-payment-transfer'].on_page_load = function(wrapper) {
 		fieldname: 'document_type',
 		label: __('Document Type'),
 		fieldtype: 'Select',
-		options: "Purchase Order\nPurchase Invoice\nExpense Claim",
+		options: "Purchase Order\nPurchase Invoice\nExpense Claim\nEmployee Advance",
 		default: "Purchase Order",
 		onchange:()=>{
 			frappe.h2h_payment_transfer.run(page);

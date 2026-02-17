@@ -39,7 +39,7 @@ def get_entries(document_type, due_date=None, from_date=None, to_date=None, supp
 					ec.name as document_name, ec.grand_total, ec.posting_date, ec.expense_approver, ec.approval_status, ec.employee, ec.employee_name
 				From 
 					`tabExpense Claim` as ec
-				Where (ec.workflow_state = 'Approved' or ec.approval_status = 'Approved') and ec.is_paid = 0 and ec.status != 'Paid' and ec.docstatus = 1 {condition} AND NOT EXISTS (
+				Where (ec.workflow_state = 'Approved' or ec.approval_status = 'Approved' or ec.docstatus = 1) and ec.is_paid = 0 and ec.status != 'Paid' and ec.docstatus = 1 {condition} AND NOT EXISTS (
 					SELECT name 
 						FROM `tabPayment Entry Reference` per
 						WHERE 
@@ -55,8 +55,53 @@ def get_entries(document_type, due_date=None, from_date=None, to_date=None, supp
 		return { "data" : data , "document_type" : document_type }
 	
 	filter = ''
+	if from_date:
+		filter += f" and ea.posting_date >= '{from_date}'"
+	if to_date:
+		filter += f" and ea.posting_date <= '{to_date}'"
+	if document_name:
+		filter += f" and ea.name = '{document_name}'"
+	condition = ''
+	if document_name:
+		condition += f"ea.name = {document_name}"
+
+	if document_type == "Employee Advance":
+		data = frappe.db.sql(f"""
+				Select 
+					ea.name as document_name, 
+					ea.pending_amount, 
+					ea.paid_amount, 
+					ea.advance_amount, 
+					ea.employee, 
+					ea.employee_name, 
+					ea.status,
+					ea.posting_date
+				From `tabEmployee Advance` as ea
+				Where ea.docstatus = 1 and ea.status not in  ('Paid', 'Claimed') {condition} AND NOT EXISTS (
+					SELECT per.name 
+						FROM `tabPayment Entry Reference` per
+						WHERE 
+							per.reference_name = ea.name
+							AND per.docstatus = 0
+					)
+				Order By ea.posting_date {orderby}
+				""", as_dict=1)
+
+		for row in data:
+			grand_total = row.pending_amount or 0
+			row.update({
+				"outstanding_amount" : frappe.utils.fmt_money(grand_total, currency=row.currency),
+				"grand_total" : frappe.utils.fmt_money(grand_total, currency=row.currency),
+				"paid_amount" : frappe.utils.fmt_money(row.paid_amount, currency=row.currency),
+				"pending_amount" :frappe.utils.fmt_money(row.pending_amount, currency=row.currency),
+				"advance_amount" : frappe.utils.fmt_money(row.advance_amount, currency=row.currency)
+			})
+
+		return { "data" : data , "document_type" : document_type }
+
+	filter = ''
 	if due_date:
-		filter += f" and pi.posting_date <= '{due_date}'"
+		filter += f" and pi.due_date <= '{due_date}'"
 	if from_date:
 		filter += f" and pi.posting_date >= '{from_date}'"
 	if to_date:
@@ -136,7 +181,17 @@ def create_payment_entry_(document_type, invoices, bank_account):
 			create_payment_entry(document_type, row, bank_account = bank_account)
 	if document_type == 'Expense Claim':
 		for row in selected_invoices:
-			get_payment_entry_for_employee(document_type, row)
+			get_payment_entry_for_employee(document_type, row, bank_account = bank_account)
+	if document_type == "Employee Advance":
+		from hrms.overrides.employee_payment_entry import get_payment_entry_for_employee as get_payment_entry_for_employee_
+		for row in selected_invoices:
+			pe = get_payment_entry_for_employee_(document_type, row, bank_account = bank_account)
+			pe.ignore_permissions = 1
+			pe.reference_no = "Waiting From Bank"
+			pe.reference_date = getdate()
+			pe.ignore_mandatory = True
+			pe.insert(ignore_mandatory=True)
+
 	return "Created"
 
 
@@ -276,9 +331,9 @@ def get_payment_entry_for_employee(dt, dn, party_amount=None, bank_account=None,
 	pe.letter_head = doc.get("letter_head")
 	pe.paid_from = bank.account
 	pe.paid_to = party_account
-	pe.business_unit = doc.business_unit
-	pe.cost_center = doc.cost_center
-	pe.project = doc.project
+	pe.business_unit = doc.get("business_unit")
+	pe.cost_center = doc.get("cost_center")
+	pe.project = doc.get("project")
 	pe.paid_from_account_currency = bank.account_currency
 	pe.paid_to_account_currency = party_account_currency
 	pe.paid_amount = paid_amount

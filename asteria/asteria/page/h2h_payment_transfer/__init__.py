@@ -124,7 +124,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
         address_contact_details = get_address_contact_details(pe_doc.party, party_type)
         address = address_contact_details.get("address", {})
         contact = address_contact_details.get("contact", {})
-        if document_type == "Expense Claim" and not contact:
+        if document_type in ["Expense Claim", "Employee Advance"] and not contact:
             if email_id := frappe.db.get_value("Employee", pe_doc.party, "personal_email"):
                 email_id = email_id
             elif email_id := frappe.db.get_value("Employee", pe_doc.party, "company_email"):
@@ -147,7 +147,7 @@ def process_dummy_csv_and_create_updated_csv(invoices, document_type, scheduled_
         if not contact:
             frappe.throw(f"Contact Details Not available for {get_link_to_form(party_type, pe_doc.party)}")
 
-        if not address and document_type == "Expense Claim":
+        if not address and document_type in ["Expense Claim", "Employee Advance"]:
             city = frappe.db.get_value("Employee", pe_doc.party, "city")
             if not city:
                 frappe.throw(f"City is not updated in Employee Master <b>{pe_doc.party}</b>")

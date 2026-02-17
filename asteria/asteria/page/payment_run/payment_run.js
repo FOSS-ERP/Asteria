@@ -9,7 +9,7 @@ frappe.pages['payment-run'].on_page_load = function(wrapper) {
 		fieldname: 'document_type',
 		label: __('Document Type'),
 		fieldtype: 'Select',
-		options: "Purchase Order\nPurchase Invoice\nExpense Claim",
+		options: "Purchase Order\nPurchase Invoice\nExpense Claim\nEmployee Advance",
 		default: "Purchase Order",
 		onchange:()=>{
 			page.fields_dict.document_name.df.options = page.fields_dict.document_type.get_value()

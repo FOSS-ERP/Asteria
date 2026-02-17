@@ -178,6 +178,14 @@ doc_events = {
 	},
 	"Material Request" : {
 		"on_submit" : "asteria.asteria.doc_events.material_request.on_submit"
+	},
+	"Work Order" : {
+		"validate" : "asteria.asteria.doc_events.work_order.validate",
+		"on_trash" : "asteria.asteria.doc_events.work_order.on_trash",
+		"on_submit": "asteria.asteria.doc_events.work_order.on_submit",
+	},
+	"NC Actions" : {
+		"after_insert" : "asteria.asteria.doc_events.nc_action.after_insert"
 	}
 }
 

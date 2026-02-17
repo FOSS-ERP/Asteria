@@ -178,6 +178,13 @@ def setup_custom_fields():
                 "insert_after": "total_completed_qty",
                 "fieldtype": "Table MultiSelect",
                 "options": "Table Non Conformance",
+            },
+            {
+                "label": "Nc Action",
+                "fieldname": "non_action_table",
+                "insert_after": "non_conformance_table",
+                "fieldtype": "Table MultiSelect",
+                "options": "NC Action Table",
             }
         ],
         "Material Request" : [
@@ -225,7 +232,29 @@ def setup_custom_fields():
                 "no_copy" : 1,
                 "in_list_view" : 1
             }
-        ]
+        ],
+        "Production Plan Item" : [
+            {
+                "label" : "Ordered Qty (Draft)",
+                "fieldname" : "ordered_in_draft",
+                "fieldtype" : "Float",
+                "insert_after" : "bom_no",
+            },
+            {
+                "label" : "Remaining Qty",
+                "fieldname" : "remaining_qty",
+                "fieldtype" : "Float",
+                "insert_after" : "bom_no",
+            }
+        ],
+        "Production Plan Sub Assembly Item" : [
+            {
+                "label" : "Remaining Qty",
+                "fieldname" : "remaining_qty",
+                "fieldtype" : "Float",
+                "insert_after" : "wo_produced_qty",
+            }
+        ],
         
     }
     

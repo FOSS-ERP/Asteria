@@ -149,6 +149,7 @@ def create_stock_entry(source_name, target_doc=None):
 
 def validate(self, method):
 	fetch_non_conformance(self)
+	fetch_nc_action(self)
 
 def fetch_non_conformance(self):
 	if self.for_job_card:
@@ -161,6 +162,19 @@ def fetch_non_conformance(self):
 				if row not in current_data:
 					self.append("non_conformance_table", {
 						"non_conformance" : row
+					})
+
+def fetch_nc_action(self):
+	if self.for_job_card:
+		if nc_actions := frappe.db.get_list("NC Actions", {"job_card" : self.for_job_card}, pluck="name"):
+			current_data = [
+				d.nc_action for d in self.non_action_table
+			]	
+
+			for row in nc_actions:
+				if row not in current_data:
+					self.append("non_action_table", {
+						"nc_action" : row
 					})
 
 @frappe.whitelist()

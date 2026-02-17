@@ -1,9 +1,12 @@
 import frappe
 from erpnext.manufacturing.doctype.work_order.work_order import WorkOrder 
-
+from asteria.asteria.doc_events.work_order import update_order_quantity
 
 
 class CustomWorkOrder(WorkOrder):
+    def after_insert(self):
+        trigger_method = "validate"
+        update_order_quantity(self, trigger_method)
     def update_transferred_qty_for_required_items(self):
         ste = frappe.qb.DocType("Stock Entry")
         ste_child = frappe.qb.DocType("Stock Entry Detail")

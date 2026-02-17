@@ -131,6 +131,49 @@
                 {% endfor %}
             </tbody>
             {% endif %}
+            {% if document_type == "Employee Advance" %}
+            <thead class="table-light">
+                <tr>
+                    <th><input type="checkbox" id="select-all"></th>
+                    <th>Employee Advance</th>
+                    <th>Employee</th>
+                    <th>Employee Name</th>
+                    <th>Advance Amount</th>
+                    <th>Paid Amount</th>
+                    <th class="sortable" data-sort-key="posting_date">
+                        Date
+                        <span class="sort-icon sort-icon-pe" data-order-type="ASC">⇅</span>
+                    </th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in data %}
+                <tr>
+                    <td>
+                        <input type="checkbox" class="document-selected" data-invoice="{{ row.document_name }}">
+                    </td>
+                    <td>
+                        <a href="/desk/Form/Employee Advance/{{ row.document_name }}" class="text-decoration-none">
+                            {{ row.document_name }}
+                        </a>
+                    </td>
+                    <td>
+                        <a href="/desk/Form/Employee/{{ row.employee }}">{{ row.employee }}</a>
+                    </td>
+                    <td>{{ row.employee_name }}</td>
+                    <td>{{ row.advance_amount }}</td>
+                    <td>{{ row.paid_amount }}</td>
+                    <td>{{ row.posting_date }}</td>
+                    <td>
+                        <span class="badge" >
+                            {{ row.status }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% endif %}
         </table>
     </div>
 </div>

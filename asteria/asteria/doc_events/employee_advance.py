@@ -1,7 +1,7 @@
 import frappe
 
 def validate(doc, method):
-    self.custom_status = self.status
+    doc.custom_status = doc.status
     # Check workflow state
     if doc.workflow_state == "Waiting for Expense Approver":
         # Get Employee record

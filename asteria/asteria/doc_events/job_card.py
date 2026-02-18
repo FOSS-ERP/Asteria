@@ -69,50 +69,45 @@ def on_submit(self, method):
 			if row.get("is_finished_item"):
 				continue
 
+			has_serial_no = frappe.db.get_value("Item", row.item_code, "has_serial_no")
+			has_batch_no = frappe.db.get_value("Item", row.item_code, "has_batch_no")
+
 			args = {
 					'doc' : se,
 					'item_code': row.item_code,
 					'warehouse': row.s_warehouse,
-					'has_serial_no': frappe.db.get_value("Item", row.item_code, "has_serial_no"),
-					'has_batch_no': frappe.db.get_value("Item", row.item_code, "has_batch_no"),
+					'has_serial_no': has_serial_no,
+					'has_batch_no': has_batch_no,
 					'qty': row.qty,
 					'based_on': "FIFO",
 					'posting_date' : se.posting_date,
 					'posting_time' : se.posting_time,
 				}
 			
-			serial_no = get_auto_data(**args) or []
-			sr_list = [d.get("serial_no") for d in serial_no if d.get("serial_no")]
+			auto_data = get_auto_data(**args) or []
+			sr_list = [d.get("serial_no") for d in auto_data if d.get("serial_no")]
 
-			# if sr_list and row.qty != len(sr_list):
-			#     row.qty = len(sr_list)
-			#     if row.serial_and_batch_bundle:
-			#         serial_and_batch_bundle = frappe.get_doc("Serial and Batch Bundle", row.serial_and_batch_bundle)
-			#         serial_and_batch_bundle.entries = []
-			#         for sr in sr_list:
-			#             serial_and_batch_bundle.append("entries", {
-			#                 "serial_no" : sr,
-			#                 "warehouse" : row.s_warehouse,
-			#                 "qty" : -1
-			#             })
-			#         serial_and_batch_bundle.flags.ignore_permissions = True
-			#         serial_and_batch_bundle.flags.ignore_mandatory = True
-			#         serial_and_batch_bundle.save()
-			
 			if sr_list: 
 				serial_no_list = ",".join(sr_list)
 				row.use_serial_batch_fields = 1
 				row.serial_no = serial_no_list
+
+			# Auto-select batch from the same work order cycle
+			if not sr_list and has_batch_no:
+				batch_list = [d for d in auto_data if d.get("batch_no")]
+				if batch_list:
+					row.use_serial_batch_fields = 1
+					row.batch_no = batch_list[0].get("batch_no")
 				
 
 		se.insert(ignore_mandatory = True)
 
 		if workflow:
 			doc = frappe.get_doc("Workflow", workflow)
-			se.workflow_state = doc.transitions[0].get("next_state")
-			se.flags.ignore_permissions = True
-			se.flags.ignore_mandatory = True
-			se.save()
+			frappe.db.set_value("Stock Entry", se.name, "workflow_state", doc.transitions[0].get("next_state"))
+			# se.flags.ignore_permissions = True
+			# se.flags.ignore_mandatory = True
+			# se.save()
 
 		frappe.msgprint("Stock Entry is successfully created. {0}".format(frappe.utils.get_link_to_form("Stock Entry", se.name)))
 

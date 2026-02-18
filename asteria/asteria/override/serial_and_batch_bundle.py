@@ -17,7 +17,77 @@ def get_auto_data(**kwargs):
 		return get_available_serial_nos(kwargs)
 
 	elif cint(kwargs.has_batch_no):
-		return get_auto_batch_nos(kwargs)
+		return get_available_batches_for_manufacture(kwargs)
+
+
+def get_available_batches_for_manufacture(kwargs):
+	"""Fetch batch numbers from the same work order cycle (Material Transfer for Manufacture).
+	If batch B1 was transferred for manufacturing, B1 will be auto-selected."""
+	if kwargs.get("doc"):
+		try:
+			doc = frappe._dict(parse_json(kwargs.doc))
+		except Exception:
+			doc = kwargs.doc
+
+		if doc.get("doctype") == "Stock Entry" and doc.get("stock_entry_type") == "Manufacture":
+			work_order = doc.get("work_order")
+			if work_order:
+				material_transfer_entries = frappe.get_all(
+					"Stock Entry",
+					{
+						"stock_entry_type": "Material Transfer for Manufacture",
+						"work_order": work_order,
+						"docstatus": 1,
+					},
+					pluck="name",
+				)
+
+				if material_transfer_entries:
+					entry_list = ", ".join([f'"{e}"' for e in material_transfer_entries])
+
+					conditions = f" AND sbb.voucher_no IN ({entry_list})"
+					if kwargs.item_code:
+						conditions += f" AND sbb.item_code = '{kwargs.item_code}'"
+					if kwargs.get("warehouse"):
+						conditions += f" AND sbe.warehouse = '{kwargs.warehouse}'"
+
+					# Fetch batches from Serial and Batch Bundle entries
+					batch_data = frappe.db.sql(f"""
+						SELECT
+							sbe.batch_no,
+							SUM(ABS(sbe.qty)) as qty,
+							sbe.warehouse
+						FROM `tabSerial and Batch Bundle` AS sbb
+						LEFT JOIN `tabSerial and Batch Entry` AS sbe ON sbe.parent = sbb.name
+						WHERE
+							sbb.docstatus = 1
+							AND sbe.batch_no IS NOT NULL
+							AND sbb.has_batch_no = 1
+							{conditions}
+						GROUP BY sbe.batch_no, sbe.warehouse
+					""", as_dict=1)
+
+					# Fallback: check Stock Entry Detail for batch_no (when use_serial_batch_fields is used)
+					if not batch_data:
+						batch_data = frappe.db.sql(f"""
+							SELECT
+								sed.batch_no,
+								SUM(sed.qty) as qty,
+								sed.t_warehouse as warehouse
+							FROM `tabStock Entry Detail` AS sed
+							WHERE
+								sed.parent IN ({entry_list})
+								AND sed.item_code = %(item_code)s
+								AND sed.batch_no IS NOT NULL
+								AND sed.batch_no != ''
+							GROUP BY sed.batch_no, sed.t_warehouse
+						""", {"item_code": kwargs.item_code}, as_dict=1)
+
+					if batch_data:
+						return batch_data
+
+	# Fallback to standard batch selection
+	return get_auto_batch_nos(kwargs)
 
 
 def get_available_serial_nos(kwargs):

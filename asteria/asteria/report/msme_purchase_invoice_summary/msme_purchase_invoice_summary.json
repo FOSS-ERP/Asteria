@@ -1,0 +1,115 @@
+{
+ "add_total_row": 1,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2026-01-14 16:41:14.245647",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "Purchase Invoice From Date",
+   "mandatory": 0,
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "Purchase Invoice To Date",
+   "mandatory": 0,
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "Supplier ID",
+   "mandatory": 0,
+   "options": "Supplier",
+   "wildcard_filter": 0
+  },
+  {
+   "fieldname": "mode_of_payment",
+   "fieldtype": "Link",
+   "label": "Payment Mode",
+   "mandatory": 0,
+   "options": "Mode of Payment",
+   "wildcard_filter": 0
+  },
+  {
+   "default": "",
+   "fieldname": "payment_status",
+   "fieldtype": "Select",
+   "label": "Payment Status",
+   "mandatory": 0,
+   "options": "All\nDelay\nOn Time",
+   "wildcard_filter": 0
+  }
+ ],
+ "idx": 0,
+ "is_standard": "Yes",
+ "javascript": "frappe.query_reports[\"MSME PINV Payment Summary\"] = {\n    \"filters\": [\n        {\n            \"fieldname\": \"from_date\",\n            \"label\": __(\"From Date\"),\n            \"fieldtype\": \"Date\"\n        },\n        {\n            \"fieldname\": \"to_date\",\n            \"label\": __(\"To Date\"),\n            \"fieldtype\": \"Date\"\n        },\n        {\n            \"fieldname\": \"supplier\",\n            \"label\": __(\"Supplier\"),\n            \"fieldtype\": \"Link\",\n            \"options\": \"Supplier\"\n        },\n        {\n            \"fieldname\": \"mode_of_payment\",\n            \"label\": __(\"Mode of Payment\"),\n            \"fieldtype\": \"Link\",\n            \"options\": \"Mode of Payment\"\n        },\n        {\n            \"fieldname\": \"payment_status\",\n            \"label\": __(\"Payment Status\"),\n            \"fieldtype\": \"Select\",\n            \"\"options\": \"\\nAll \\nOn Time \\nDelay\"\n        }\n        \n        \n    ]\n};\n",
+ "letter_head": null,
+ "modified": "2026-02-18 11:33:06.250786",
+ "modified_by": "Administrator",
+ "module": "Asteria",
+ "name": "MSME Purchase Invoice Summary",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Purchase Invoice",
+ "report_name": "MSME Purchase Invoice Summary",
+ "report_script": "# ------------------------\n# PURCHASE INVOICE QUERY\n# ------------------------\n\npi_conditions = []\npi_values = {}\n\nif filters.get(\"from_date\"):\n    pi_conditions.append(\"pi.posting_date >= %(from_date)s\")\n    pi_values[\"from_date\"] = frappe.utils.getdate(filters.get(\"from_date\"))\n\nif filters.get(\"to_date\"):\n    pi_conditions.append(\"pi.posting_date <= %(to_date)s\")\n    pi_values[\"to_date\"] = frappe.utils.getdate(filters.get(\"to_date\"))\n\nif filters.get(\"supplier\"):\n    pi_conditions.append(\"pi.supplier = %(supplier)s\")\n    pi_values[\"supplier\"] = filters.get(\"supplier\")\n\npi_condition_str = \" AND \" + \" AND \".join(pi_conditions) if pi_conditions else \"\"\n\npi_query = f\"\"\"\n    SELECT\n        pi.name,\n        pi.posting_date,\n        pi.bill_no,\n        pi.bill_date,\n        pi.supplier,\n        pi.supplier_name,\n        pi.due_date,\n        pi.net_total,\n        pi.grand_total,\n        pi.outstanding_amount,\n        pi.status,\n        pi.currency,\n        s.msme,\n        s.gst_category,\n        s.tax_id,\n        pii.purchase_receipt,\n        pr.posting_date AS purchase_receipt_date\n    FROM `tabPurchase Invoice` pi\n    LEFT JOIN `tabSupplier` s ON s.name = pi.supplier\n    LEFT JOIN `tabPurchase Invoice Item` pii ON pii.parent = pi.name\n    LEFT JOIN `tabPurchase Receipt` pr ON pr.name = pii.purchase_receipt\n    WHERE pi.docstatus = 1\n    {pi_condition_str}\n    GROUP BY pi.name\n\"\"\"\n\npurchase_invoices = frappe.db.sql(pi_query, pi_values, as_dict=True)\n\n# ------------------------\n# Journal Entry Data (Existing - Linked to Purchase Invoices)\n# ------------------------\n\njournal_entry_data = frappe.db.sql(f\"\"\" \n                    Select \n                        je.name as journal_entry,\n                        jea.reference_name as purchase_invoice\n                    From \n                        `tabJournal Entry` as je\n                    Left Join\n                        `tabJournal Entry Account` as jea ON jea.parent = je.name\n                    Where \n                        jea.reference_type = 'Purchase Invoice' and je.is_system_generated = 0 and voucher_type != 'Exchange Gain Or Loss'\n            \"\"\", as_dict = 1)\n\njournal_entry_map = {}\nfor row in journal_entry_data:\n    if not journal_entry_map.get(row.get(\"purchase_invoice\")):\n        journal_entry_map[row.get(\"purchase_invoice\")] = []\n        journal_entry_map[row.get(\"purchase_invoice\")].append(row.journal_entry)\n    else:\n        journal_entry_map[row.get(\"purchase_invoice\")].append(row.journal_entry)\n\n# ------------------------\n# Journal Entry Data (Supplier Transactions without Purchase Invoice)\n# ------------------------\n\nje_supplier_conditions = []\nje_supplier_values = {}\n\nif filters.get(\"from_date\"):\n    je_supplier_conditions.append(\"je.posting_date >= %(from_date)s\")\n    je_supplier_values[\"from_date\"] = frappe.utils.getdate(filters.get(\"from_date\"))\n\nif filters.get(\"to_date\"):\n    je_supplier_conditions.append(\"je.posting_date <= %(to_date)s\")\n    je_supplier_values[\"to_date\"] = frappe.utils.getdate(filters.get(\"to_date\"))\n\nif filters.get(\"supplier\"):\n    je_supplier_conditions.append(\"jea.party = %(supplier)s AND jea.party_type = 'Supplier'\")\n    je_supplier_values[\"supplier\"] = filters.get(\"supplier\")\n\nje_supplier_condition_str = \" AND \" + \" AND \".join(je_supplier_conditions) if je_supplier_conditions else \"\"\n\nje_supplier_query = f\"\"\"\n    SELECT\n        je.name AS journal_entry,\n        je.posting_date,\n        je.cheque_no AS bill_no,\n        je.cheque_date AS bill_date,\n        jea.party AS supplier,\n        jea.party AS supplier_name,\n        je.total_amount,\n        jea.debit,\n        jea.credit,\n        jea.account_currency AS currency,\n        je.remark,\n        je.total_debit,\n        je.total_credit,\n        je.difference,\n        je.voucher_type\n    FROM `tabJournal Entry` je\n    LEFT JOIN `tabJournal Entry Account` jea ON jea.parent = je.name\n    WHERE je.docstatus = 1\n        AND jea.party_type = 'Supplier'\n        AND jea.reference_type IS NULL  -- Not linked to any other document\n        AND je.is_system_generated = 0\n        AND je.voucher_type != 'Exchange Gain Or Loss'\n        {je_supplier_condition_str}\n    GROUP BY je.name, jea.name\n\"\"\"\n\nje_supplier_transactions = frappe.db.sql(je_supplier_query, je_supplier_values, as_dict=True)\n\n# ------------------------\n# PAYMENT ENTRY QUERY\n# ------------------------\n\npayment_conditions = []\npayment_values = {}\n\nif filters.get(\"mode_of_payment\"):\n    payment_conditions.append(\n        \"(pe.mode_of_payment = %(mode_of_payment)s OR pe.name IS NULL)\"\n    )\n    payment_values[\"mode_of_payment\"] = filters.get(\"mode_of_payment\")\n\npayment_condition_str = \" AND \" + \" AND \".join(payment_conditions) if payment_conditions else \"\"\n\npayment_query = f\"\"\"\n    SELECT\n        per.reference_name AS purchase_invoice,\n        pe.name AS payment_entry,\n        pe.posting_date AS payment_date,\n        pe.mode_of_payment,\n        pe.status AS payment_status,\n        per.allocated_amount\n    FROM `tabPayment Entry Reference` per\n    LEFT JOIN `tabPayment Entry` pe ON pe.name = per.parent AND pe.docstatus = 1\n    WHERE per.reference_doctype = 'Purchase Invoice' and pe.docstatus = 1\n    {payment_condition_str}\n\"\"\"\n\npayment_entries = frappe.db.sql(payment_query, payment_values, as_dict=True)\n\npayment_map = {}\nfor p in payment_entries:\n    payment_map.setdefault(p.purchase_invoice, []).append(p)\n\n\n# ------------------------\n# TAXES QUERY\n# ------------------------\n\ntax_rows = frappe.db.sql(\"\"\"\n    SELECT\n        parent,\n        SUM(CASE WHEN account_head LIKE '%CGST%' THEN base_tax_amount_after_discount_amount ELSE 0 END) AS cgst,\n        SUM(CASE WHEN account_head LIKE '%SGST%' THEN base_tax_amount_after_discount_amount ELSE 0 END) AS sgst,\n        SUM(CASE WHEN account_head LIKE '%IGST%' THEN base_tax_amount_after_discount_amount ELSE 0 END) AS igst,\n        SUM(CASE WHEN account_head LIKE '%TDS%' THEN base_tax_amount_after_discount_amount ELSE 0 END) AS tds,\n        GROUP_CONCAT(DISTINCT CASE WHEN account_head LIKE '%TDS%' THEN account_head END) AS tds_account\n    FROM `tabPurchase Taxes and Charges`\n    GROUP BY parent\n\"\"\", as_dict=True)\n\ntax_map = {t.parent: t for t in tax_rows}\n\n\n# ------------------------\n# FINAL DATA BUILD\n# ------------------------\n\nfinal_data = []\ntoday_date = frappe.utils.getdate(frappe.utils.today())\n\n# Process Purchase Invoices\nfor pi in purchase_invoices:\n    jv = ''\n    if journal_entry_map.get(pi.name):\n        jv_list = list(set(journal_entry_map.get(pi.name)))\n        jv = jv_list[0]\n\n    payments = payment_map.get(pi.name, [])\n    taxes = tax_map.get(pi.name, {})\n\n    is_delay = (\n        pi.outstanding_amount > 0\n        and pi.due_date\n        and frappe.utils.getdate(pi.due_date) < today_date\n    )\n\n    # Payment Status filter\n    if filters.get(\"payment_status\") == \"Delay\" and not is_delay:\n        continue\n    if filters.get(\"payment_status\") == \"On Time\" and is_delay:\n        continue\n\n    overdue_amount = pi.outstanding_amount if is_delay else 0\n\n    if payments:\n        for p in payments:\n            delay_days = (\n                (frappe.utils.getdate(p.payment_date) - frappe.utils.getdate(pi.due_date)).days\n                if p.payment_date and pi.due_date else None\n            )\n\n            final_data.append({\n                \"PINV Date\": pi.posting_date,\n                \"Purchase Invoice\": pi.name,\n                \"Purchase Invoice Status\": pi.status,\n                \"Supplier ID\": pi.supplier,\n                \"Supplier Name\": pi.supplier_name,\n\n                \"Purchase Receipt\": pi.purchase_receipt,\n                \"Purchase Receipt Date\": pi.purchase_receipt_date,\n\n                \"Due Date\": pi.due_date,\n                \"MSME\": pi.msme,\n\n                \"Payment Date\": p.payment_date,\n                \"Payment Entry\": p.payment_entry,\n                \"Payment Mode\": p.mode_of_payment,\n                \"Payment Entry Status\": p.payment_status,\n\n                \"Payment Delay in Days\": delay_days,\n                \"Payment Status\": \"Delay\" if is_delay else \"On Time\",\n\n                \"Supplier Invoice No\": pi.bill_no,\n                \"Supplier Invoice Date\": pi.bill_date,\n\n                \"GST Category\": pi.gst_category,\n                \"GST\": pi.tax_id,\n\n                # Credit and Debit amounts\n                \"Amount (Credit)\": pi.grand_total,  # Invoice amount as Credit (liability)\n                \"Amount (Debit)\": p.allocated_amount or 0,  # Paid amount as Debit (payment)\n                \n                # Keep original fields for backward compatibility\n                \"Invoice Amount\": pi.grand_total,\n                \"Paid Amount\": p.allocated_amount or 0,\n                \"Unpaid Amount\": pi.outstanding_amount,\n                \"Overdue Amount\": overdue_amount,\n                \n                \"Payable Amount\": p.allocated_amount if p.allocated_amount > 0 else 0,\n                \"Receivable Amount\": 0,  # Purchase Invoices are usually payable\n\n                \"Taxable Amount\": pi.net_total,\n                \"CGST Amount\": taxes.get(\"cgst\", 0),\n                \"SGST Amount\": taxes.get(\"sgst\", 0),\n                \"IGST Amount\": taxes.get(\"igst\", 0),\n                \"TDS Amount\": taxes.get(\"tds\", 0),\n                \"TDS Account\": taxes.get(\"tds_account\"),\n                \"Currency\": pi.currency,\n                \"Journal Entry\": jv,\n                \"Transaction Type\": \"Purchase Invoice\"\n            })\n    else:\n        final_data.append({\n            \"PINV Date\": pi.posting_date,\n            \"Purchase Invoice\": pi.name,\n            \"Purchase Invoice Status\": pi.status,\n            \"Supplier ID\": pi.supplier,\n            \"Supplier Name\": pi.supplier_name,\n\n            \"Purchase Receipt\": pi.purchase_receipt,\n            \"Purchase Receipt Date\": pi.purchase_receipt_date,\n\n            \"Due Date\": pi.due_date,\n            \"MSME\": pi.msme,\n\n            \"Payment Date\": None,\n            \"Payment Entry\": None,\n            \"Payment Mode\": None,\n            \"Payment Entry Status\": None,\n\n            \"Payment Delay in Days\": None,\n            \"Payment Status\": \"Delay\" if is_delay else \"On Time\",\n\n            \"Supplier Invoice No\": pi.bill_no,\n            \"Supplier Invoice Date\": pi.bill_date,\n\n            \"GST Category\": pi.gst_category,\n            \"GST\": pi.tax_id,\n\n            # Credit and Debit amounts\n            \"Amount (Credit)\": pi.grand_total,  # Invoice amount as Credit (liability)\n            \"Amount (Debit)\": 0,  # No payment yet\n            \n            # Keep original fields for backward compatibility\n            \"Invoice Amount\": pi.grand_total,\n            \"Paid Amount\": 0,\n            \"Unpaid Amount\": pi.outstanding_amount,\n            \"Overdue Amount\": overdue_amount,\n            \n            \"Payable Amount\": 0,  # No payment yet\n            \"Receivable Amount\": 0,\n\n            \"Taxable Amount\": pi.net_total,\n            \"CGST Amount\": taxes.get(\"cgst\", 0),\n            \"SGST Amount\": taxes.get(\"sgst\", 0),\n            \"IGST Amount\": taxes.get(\"igst\", 0),\n            \"TDS Amount\": taxes.get(\"tds\", 0),\n            \"TDS Account\": taxes.get(\"tds_account\"),\n            \"Currency\": pi.currency,\n            \"Journal Entry\": jv,\n            \"Transaction Type\": \"Purchase Invoice\"\n        })\n\n# Process Journal Entries (Supplier transactions without Purchase Invoice)\nfor je in je_supplier_transactions:\n    # Determine if it's Payable (credit) or Receivable (debit)\n    payable_amount = je.credit if je.credit > 0 else 0\n    receivable_amount = je.debit if je.debit > 0 else 0\n    \n    final_data.append({\n        \"PINV Date\": je.posting_date,\n        \"Purchase Invoice\": None,\n        \"Purchase Invoice Status\": None,\n        \"Supplier ID\": je.supplier,\n        \"Supplier Name\": je.supplier_name,\n\n        \"Purchase Receipt\": None,\n        \"Purchase Receipt Date\": None,\n\n        \"Due Date\": None,\n        \"MSME\": None,  # Could fetch from supplier if needed\n\n        \"Payment Date\": je.posting_date,\n        \"Payment Entry\": None,\n        \"Payment Mode\": None,\n        \"Payment Entry Status\": je.voucher_type,\n\n        \"Payment Delay in Days\": None,\n        \"Payment Status\": None,\n\n        \"Supplier Invoice No\": je.bill_no,\n        \"Supplier Invoice Date\": je.bill_date,\n\n        \"GST Category\": None,  # Could fetch from supplier\n        \"GST\": None,  # Could fetch from supplier\n\n        # Credit and Debit amounts\n        \"Amount (Credit)\": je.credit if je.credit > 0 else 0,  # Credit amount\n        \"Amount (Debit)\": je.debit if je.debit > 0 else 0,  # Debit amount\n        \n        # Keep original fields for backward compatibility\n        \"Invoice Amount\": je.total_amount,\n        \"Paid Amount\": 0,\n        \"Unpaid Amount\": 0,\n        \"Overdue Amount\": 0,\n        \n        \"Payable Amount\": payable_amount,\n        \"Receivable Amount\": receivable_amount,\n\n        \"Taxable Amount\": 0,\n        \"CGST Amount\": 0,\n        \"SGST Amount\": 0,\n        \"IGST Amount\": 0,\n        \"TDS Amount\": 0,\n        \"TDS Account\": None,\n        \"Currency\": je.currency,\n        \"Journal Entry\": je.journal_entry,\n        \"Transaction Type\": \"Journal Entry (Direct)\"\n    })\n\n# Sort final_data by date if needed\nfinal_data.sort(key=lambda x: x.get(\"PINV Date\") or x.get(\"Payment Date\") or frappe.utils.getdate(\"1900-01-01\"))\n\ncolumns = [\n    {\"label\": \"Transaction Type\", \"fieldname\": \"Transaction Type\", \"fieldtype\": \"Data\", \"width\": 150},\n    {\"label\": \"PINV Date\", \"fieldname\": \"PINV Date\", \"fieldtype\": \"Date\", \"width\": 100},\n    {\"label\": \"Purchase Invoice\", \"fieldname\": \"Purchase Invoice\", \"fieldtype\": \"Link\", \"options\": \"Purchase Invoice\", \"width\": 150},\n    {\"label\": \"Purchase Invoice Status\", \"fieldname\": \"Purchase Invoice Status\", \"fieldtype\": \"Data\", \"width\": 120},\n    {\"label\": \"Supplier ID\", \"fieldname\": \"Supplier ID\", \"fieldtype\": \"Link\", \"options\": \"Supplier\", \"width\": 120},\n    {\"label\": \"Supplier Name\", \"fieldname\": \"Supplier Name\", \"fieldtype\": \"Data\", \"width\": 150},\n    \n    {\"label\": \"Purchase Receipt\", \"fieldname\": \"Purchase Receipt\", \"fieldtype\": \"Link\", \"options\": \"Purchase Receipt\", \"width\": 150},\n    {\"label\": \"Purchase Receipt Date\", \"fieldname\": \"Purchase Receipt Date\", \"fieldtype\": \"Date\", \"width\": 120},        \n    {\"label\": \"Journal Entry\", \"fieldname\": \"Journal Entry\", \"fieldtype\": \"Link\", \"options\": \"Journal Entry\", \"width\": 150},\n    \n    {\"label\": \"Due Date\", \"fieldname\": \"Due Date\", \"fieldtype\": \"Date\", \"width\": 100},\n    {\"label\": \"MSME\", \"fieldname\": \"MSME\", \"fieldtype\": \"Select\", \"width\": 80},\n\n    {\"label\": \"Payment Delay in Days\", \"fieldname\": \"Payment Delay in Days\", \"fieldtype\": \"Int\", \"width\": 100},\n    {\"label\": \"Payment Status\", \"fieldname\": \"Payment Status\", \"fieldtype\": \"Select\", \"options\": \"On Time\\nDelay\", \"width\": 100},\n\n    {\"label\": \"Payment Date\", \"fieldname\": \"Payment Date\", \"fieldtype\": \"Date\", \"width\": 100},\n    {\"label\": \"Payment Entry\", \"fieldname\": \"Payment Entry\", \"fieldtype\": \"Link\", \"options\": \"Payment Entry\", \"width\": 150},\n    {\"label\": \"Payment Mode\", \"fieldname\": \"Payment Mode\", \"fieldtype\": \"Link\", \"options\": \"Mode of Payment\", \"width\": 120},\n    {\"label\": \"Payment Entry Status\", \"fieldname\": \"Payment Entry Status\", \"fieldtype\": \"Data\", \"width\": 120},\n    \n    {\"label\": \"Supplier Invoice No\", \"fieldname\": \"Supplier Invoice No\", \"fieldtype\": \"Data\", \"width\": 120},\n    {\"label\": \"Supplier Invoice Date\", \"fieldname\": \"Supplier Invoice Date\", \"fieldtype\": \"Date\", \"width\": 120},\n\n    {\"label\": \"GST Category\", \"fieldname\": \"GST Category\", \"fieldtype\": \"Select\", \"width\": 100},\n    {\"label\": \"GST\", \"fieldname\": \"GST\", \"fieldtype\": \"Data\", \"width\": 120},\n\n    # New Credit/Debit columns\n    {\"label\": \"Amount (Credit)\", \"fieldname\": \"Amount (Credit)\", \"fieldtype\": \"Currency\", \"width\": 130},\n    {\"label\": \"Amount (Debit)\", \"fieldname\": \"Amount (Debit)\", \"fieldtype\": \"Currency\", \"width\": 130},\n    \n    # Original amount columns\n    {\"label\": \"Invoice Amount\", \"fieldname\": \"Invoice Amount\", \"fieldtype\": \"Currency\", \"width\": 120},\n    {\"label\": \"Paid Amount\", \"fieldname\": \"Paid Amount\", \"fieldtype\": \"Currency\", \"width\": 120},\n    {\"label\": \"Unpaid Amount\", \"fieldname\": \"Unpaid Amount\", \"fieldtype\": \"Currency\", \"width\": 120},\n    {\"label\": \"Overdue Amount\", \"fieldname\": \"Overdue Amount\", \"fieldtype\": \"Currency\", \"width\": 120},\n    \n    {\"label\": \"Payable Amount\", \"fieldname\": \"Payable Amount\", \"fieldtype\": \"Currency\", \"width\": 120},\n    {\"label\": \"Receivable Amount\", \"fieldname\": \"Receivable Amount\", \"fieldtype\": \"Currency\", \"width\": 120},\n\n    {\"label\": \"Taxable Amount\", \"fieldname\": \"Taxable Amount\", \"fieldtype\": \"Currency\", \"width\": 120},\n    {\"label\": \"CGST Amount\", \"fieldname\": \"CGST Amount\", \"fieldtype\": \"Currency\", \"width\": 100},\n    {\"label\": \"SGST Amount\", \"fieldname\": \"SGST Amount\", \"fieldtype\": \"Currency\", \"width\": 100},\n    {\"label\": \"IGST Amount\", \"fieldname\": \"IGST Amount\", \"fieldtype\": \"Currency\", \"width\": 100},\n    {\"label\": \"TDS Amount\", \"fieldname\": \"TDS Amount\", \"fieldtype\": \"Currency\", \"width\": 100},\n    {\"label\": \"TDS Account\", \"fieldname\": \"TDS Account\", \"fieldtype\": \"Data\", \"width\": 120},\n\n    {\"label\": \"Currency\", \"fieldname\": \"Currency\", \"fieldtype\": \"Data\", \"width\": 80},\n]\n\ndata = columns, final_data",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Purchase User"
+  },
+  {
+   "role": "Accounts Manager"
+  },
+  {
+   "role": "Auditor"
+  },
+  {
+   "role": "Purchase User"
+  },
+  {
+   "role": "Auditor"
+  },
+  {
+   "role": "Purchase User"
+  },
+  {
+   "role": "Auditor"
+  },
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Purchase User"
+  },
+  {
+   "role": "Auditor"
+  },
+  {
+   "role": "Purchase User"
+  },
+  {
+   "role": "Auditor"
+  },
+  {
+   "role": "Purchase User"
+  },
+  {
+   "role": "Auditor"
+  },
+  {
+   "role": "Supplier"
+  }
+ ],
+ "timeout": 1000
+}

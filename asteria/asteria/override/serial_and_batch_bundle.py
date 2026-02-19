@@ -6,7 +6,7 @@ from erpnext.stock.doctype.serial_and_batch_bundle.serial_and_batch_bundle impor
 	get_non_expired_batches,
 	get_serial_nos_based_on_filters
 )
-from frappe.utils import parse_json, cint, get_link_to_form
+from frappe.utils import parse_json, cint, cstr, flt, get_link_to_form
 from frappe import _
 
 
@@ -17,77 +17,116 @@ def get_auto_data(**kwargs):
 		return get_available_serial_nos(kwargs)
 
 	elif cint(kwargs.has_batch_no):
-		return get_available_batches_for_manufacture(kwargs)
+		return get_auto_batch_nos(kwargs)
 
 
 def get_available_batches_for_manufacture(kwargs):
 	"""Fetch batch numbers from the same work order cycle (Material Transfer for Manufacture).
-	If batch B1 was transferred for manufacturing, B1 will be auto-selected."""
+	If batch B1 was transferred for manufacturing, B1 will be auto-selected.
+	Only batches that currently have stock in the WIP warehouse are returned."""
+	
+	# Check if batch validation is enabled in Stock Settings
+	# if not frappe.db.get_single_value("Stock Settings", "enable_batch_validation_for_manufacture", 0):
+	# 	return get_auto_batch_nos(kwargs)
+	
 	if kwargs.get("doc"):
 		try:
 			doc = frappe._dict(parse_json(kwargs.doc))
 		except Exception:
 			doc = kwargs.doc
 
-		if doc.get("doctype") == "Stock Entry" and doc.get("stock_entry_type") == "Manufacture":
-			work_order = doc.get("work_order")
-			if work_order:
-				material_transfer_entries = frappe.get_all(
-					"Stock Entry",
-					{
-						"stock_entry_type": "Material Transfer for Manufacture",
-						"work_order": work_order,
-						"docstatus": 1,
-					},
-					pluck="name",
-				)
+		# Handle both dict and document object
+		doctype = doc.get("doctype") if hasattr(doc, "get") else getattr(doc, "doctype", None)
+		stock_entry_type = doc.get("stock_entry_type") if hasattr(doc, "get") else getattr(doc, "stock_entry_type", None)
+		work_order = doc.get("work_order") if hasattr(doc, "get") else getattr(doc, "work_order", None)
 
-				if material_transfer_entries:
-					entry_list = ", ".join([f'"{e}"' for e in material_transfer_entries])
+		if doctype == "Stock Entry" and stock_entry_type == "Manufacture" and work_order:
+			# Get WIP warehouse from Work Order
+			wip_warehouse = frappe.db.get_value("Work Order", work_order, "wip_warehouse")
+			if not wip_warehouse:
+				return get_auto_batch_nos(kwargs)
 
-					conditions = f" AND sbb.voucher_no IN ({entry_list})"
-					if kwargs.item_code:
-						conditions += f" AND sbb.item_code = '{kwargs.item_code}'"
-					if kwargs.get("warehouse"):
-						conditions += f" AND sbe.warehouse = '{kwargs.warehouse}'"
+			material_transfer_entries = frappe.get_all(
+				"Stock Entry",
+				{
+					"stock_entry_type": "Material Transfer for Manufacture",
+					"work_order": work_order,
+					"docstatus": 1,
+				},
+				pluck="name",
+			)
 
-					# Fetch batches from Serial and Batch Bundle entries
+			if material_transfer_entries:
+				entry_list = ", ".join([f'"{e}"' for e in material_transfer_entries])
+
+				conditions = f" AND sbb.voucher_no IN ({entry_list})"
+				sql_params = {}
+				if kwargs.item_code:
+					# Use parameterized query to prevent SQL injection
+					conditions += " AND sbb.item_code = %(item_code)s"
+					sql_params["item_code"] = kwargs.item_code
+
+				# Fetch batches from Serial and Batch Bundle entries
+				sql_query = f"""
+					SELECT
+						sbe.batch_no,
+						SUM(ABS(sbe.qty)) as qty,
+						sbe.warehouse
+					FROM `tabSerial and Batch Bundle` AS sbb
+					LEFT JOIN `tabSerial and Batch Entry` AS sbe ON sbe.parent = sbb.name
+					WHERE
+						sbb.docstatus = 1
+						AND sbe.batch_no IS NOT NULL
+						AND sbb.has_batch_no = 1
+						{conditions}
+					GROUP BY sbe.batch_no, sbe.warehouse
+				"""
+				
+				batch_data = frappe.db.sql(sql_query, sql_params, as_dict=1)
+
+				# Fallback: check Stock Entry Detail for batch_no (when use_serial_batch_fields is used)
+				if not batch_data and kwargs.item_code:
 					batch_data = frappe.db.sql(f"""
 						SELECT
-							sbe.batch_no,
-							SUM(ABS(sbe.qty)) as qty,
-							sbe.warehouse
-						FROM `tabSerial and Batch Bundle` AS sbb
-						LEFT JOIN `tabSerial and Batch Entry` AS sbe ON sbe.parent = sbb.name
+							sed.batch_no,
+							SUM(sed.qty) as qty,
+							sed.t_warehouse as warehouse
+						FROM `tabStock Entry Detail` AS sed
 						WHERE
-							sbb.docstatus = 1
-							AND sbe.batch_no IS NOT NULL
-							AND sbb.has_batch_no = 1
-							{conditions}
-						GROUP BY sbe.batch_no, sbe.warehouse
-					""", as_dict=1)
+							sed.parent IN ({entry_list})
+							AND sed.item_code = %(item_code)s
+							AND sed.batch_no IS NOT NULL
+							AND sed.batch_no != ''
+						GROUP BY sed.batch_no, sed.t_warehouse
+					""", {"item_code": kwargs.item_code}, as_dict=1)
 
-					# Fallback: check Stock Entry Detail for batch_no (when use_serial_batch_fields is used)
-					if not batch_data:
-						batch_data = frappe.db.sql(f"""
-							SELECT
-								sed.batch_no,
-								SUM(sed.qty) as qty,
-								sed.t_warehouse as warehouse
-							FROM `tabStock Entry Detail` AS sed
-							WHERE
-								sed.parent IN ({entry_list})
-								AND sed.item_code = %(item_code)s
-								AND sed.batch_no IS NOT NULL
-								AND sed.batch_no != ''
-							GROUP BY sed.batch_no, sed.t_warehouse
-						""", {"item_code": kwargs.item_code}, as_dict=1)
+				# If MTfM entries exist, only return batches from those entries
+				# Don't fall back to standard selection - force user to pick from MTfM batches
+				if batch_data:
+					# Filter: only keep batches that have actual stock in the WIP warehouse
+					filtered = []
+					for bd in batch_data:
+						batch_no = cstr(bd.get("batch_no")).strip()
+						if not batch_no:
+							continue
+						wip_qty = frappe.db.sql(
+							"""SELECT IFNULL(SUM(actual_qty), 0)
+							FROM `tabStock Ledger Entry`
+							WHERE batch_no = %s AND warehouse = %s AND is_cancelled = 0""",
+							(batch_no, wip_warehouse),
+						)
+						if wip_qty and flt(wip_qty[0][0]) > 0:
+							filtered.append(bd)
 
-					if batch_data:
-						return batch_data
+					if filtered:
+						return filtered
+					# If MTfM entries exist but no valid batches found (all rejected), return empty list
+					return []
+				else:
+					# MTfM entries exist but no batches found for this item - return empty list
+					return []
 
-	# Fallback to standard batch selection
-	return get_auto_batch_nos(kwargs)
+	# Fallback to standard batch selection (only if no MTfM entries exist)
 
 
 def get_available_serial_nos(kwargs):

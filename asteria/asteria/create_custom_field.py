@@ -255,6 +255,15 @@ def setup_custom_fields():
                 "insert_after" : "wo_produced_qty",
             }
         ],
+        "Stock Settings" : [
+            {
+                "label" : "Enable Batch Validation for Manufacture",
+                "fieldname" : "enable_batch_validation_for_manufacture",
+                "fieldtype" : "Check",
+                "insert_after" : "enable_validation_serial_no",
+                "default" : 0
+            }
+        ],
         
     }
     

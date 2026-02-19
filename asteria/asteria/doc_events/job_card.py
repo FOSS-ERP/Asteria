@@ -98,13 +98,13 @@ def on_submit(self, method):
 				if batch_list:
 					row.use_serial_batch_fields = 1
 					row.batch_no = batch_list[0].get("batch_no")
-				
+		
 
 		se.insert(ignore_mandatory = True)
-
 		if workflow:
 			doc = frappe.get_doc("Workflow", workflow)
-			frappe.db.set_value("Stock Entry", se.name, "workflow_state", doc.transitions[0].get("next_state"))
+			workflow_state = doc.transitions[0].get("next_state")
+			frappe.db.set_value("Stock Entry", se.name, "workflow_state", workflow_state)
 			# se.flags.ignore_permissions = True
 			# se.flags.ignore_mandatory = True
 			# se.save()

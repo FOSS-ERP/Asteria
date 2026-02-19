@@ -154,6 +154,7 @@ doc_events = {
 		"on_submit" : "asteria.asteria.doc_events.purchase_receipt.on_submit"
 	},
 	"Stock Entry": {
+		"validate": "asteria.asteria.stock_entry.validate",
 		"on_submit": "asteria.asteria.stock_entry.on_submit"
 	},
 	"Expense Claim" : {

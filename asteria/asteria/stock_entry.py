@@ -1,7 +1,14 @@
 import frappe
+from frappe import _
+from frappe.utils import cstr, flt, get_link_to_form
+
+
+def validate(self, method):
+    warn_manufacture_batch_from_work_order(self)
 
 
 def on_submit(self, method):
+    validate_manufacture_batch_from_work_order(self)
     show_serial_no_transaction(self)
 
 def show_serial_no_transaction(self):
@@ -108,3 +115,166 @@ def submit_stock_entry_in_rq(stock_entry):
 def submit_stock_entry(stock_entry):
     doc = frappe.get_doc("Stock Entry", stock_entry)
     doc.submit()
+
+
+def warn_manufacture_batch_from_work_order(self):
+    """Show a warning (msgprint) on save/draft if any raw-material row
+    uses a batch that is invalid for the Work Order. Allows saving."""
+    _check_manufacture_batches(self, block=False)
+
+
+def validate_manufacture_batch_from_work_order(self):
+    """Block submission of a Manufacture Stock Entry if any raw-material row
+    uses a batch that was NOT transferred via Material Transfer for Manufacture
+    for the same Work Order."""
+    _check_manufacture_batches(self, block=True)
+
+
+def _check_manufacture_batches(self, block=True):
+    """Core check logic. If block=True, frappe.throw; if False, frappe.msgprint."""
+
+    # Check if batch validation is enabled in Stock Settings
+    if not frappe.db.get_single_value("Stock Settings", "enable_batch_validation_for_manufacture", 0) and block:
+        return
+
+    if self.stock_entry_type != "Manufacture" or not self.work_order:
+        return
+
+    # 1. Get WIP warehouse from Work Order
+    wip_warehouse = frappe.db.get_value("Work Order", self.work_order, "wip_warehouse")
+    if not wip_warehouse:
+        return
+
+    # 2. Get all submitted Material Transfer for Manufacture entries for this WO
+    material_transfer_entries = frappe.get_all(
+        "Stock Entry",
+        {
+            "stock_entry_type": "Material Transfer for Manufacture",
+            "work_order": self.work_order,
+            "docstatus": 1,
+        },
+        pluck="name",
+    )
+
+    if not material_transfer_entries:
+        return
+
+    # 3. Collect valid batches from those transfers
+    valid_batches = _get_valid_batches_for_work_order(
+        material_transfer_entries, self.work_order
+    )
+
+    if not valid_batches:
+        return
+
+    # 4. Validate each raw-material row
+    for row in self.items:
+        if row.get("is_finished_item") or row.get("is_scrap_item"):
+            continue
+
+        batch_no = cstr(row.get("batch_no")).strip()
+        if not batch_no:
+            continue
+
+        # 4a. Batch must come from a MTfM of this Work Order
+        item_valid = valid_batches.get(cstr(row.item_code).strip(), set())
+
+        if batch_no not in item_valid:
+            msg = _(
+                "Row #{0}: Batch {1} for item {2} is not from the "
+                "Material Transfer for Manufacture entries of Work Order {3}.<br><br>"
+                "Only batches transferred for this Work Order cycle are allowed."
+            ).format(
+                row.idx,
+                frappe.bold(get_link_to_form("Batch", batch_no)),
+                frappe.bold(get_link_to_form("Item", row.item_code)),
+                frappe.bold(get_link_to_form("Work Order", self.work_order)),
+            )
+            if block:
+                frappe.throw(msg, title=_("Invalid Batch for Manufacture"))
+            else:
+                frappe.msgprint(msg, title=_("Invalid Batch for Manufacture"), indicator="orange")
+
+        # 4b. Batch must currently exist in the WIP warehouse
+        #     (rejected batches transferred out of WIP will have 0 qty)
+        batch_qty = _get_batch_qty_in_warehouse(batch_no, wip_warehouse)
+        if flt(batch_qty) <= 0:
+            msg = _(
+                "Row #{0}: Batch {1} for item {2} is not available in "
+                "WIP Warehouse {3} of Work Order {4}.<br><br>"
+                "The batch may have been rejected and transferred out. "
+                "Please use a batch that is currently in the WIP Warehouse."
+            ).format(
+                row.idx,
+                frappe.bold(get_link_to_form("Batch", batch_no)),
+                frappe.bold(get_link_to_form("Item", row.item_code)),
+                frappe.bold(wip_warehouse),
+                frappe.bold(get_link_to_form("Work Order", self.work_order)),
+            )
+            if block:
+                frappe.throw(msg, title=_("Batch Not in WIP Warehouse"))
+            else:
+                frappe.msgprint(msg, title=_("Batch Not in WIP Warehouse"), indicator="orange")
+
+
+def _get_valid_batches_for_work_order(material_transfer_entries, work_order):
+    """Return { item_code: set(batch_no, …) } collected from the given
+    Material Transfer for Manufacture stock entries."""
+
+    valid = {}  # { item_code: set() }
+
+    entry_list = ", ".join([f'"{e}"' for e in material_transfer_entries])
+
+    # --- Source 1: Serial and Batch Bundle entries ---
+    sbb_batches = frappe.db.sql(
+        f"""
+        SELECT sbb.item_code, sbe.batch_no
+        FROM `tabSerial and Batch Bundle` AS sbb
+        INNER JOIN `tabSerial and Batch Entry` AS sbe ON sbe.parent = sbb.name
+        WHERE
+            sbb.docstatus = 1
+            AND sbb.has_batch_no = 1
+            AND sbe.batch_no IS NOT NULL
+            AND sbb.voucher_no IN ({entry_list})
+        """,
+        as_dict=True,
+    )
+
+    for r in sbb_batches:
+        valid.setdefault(cstr(r.item_code).strip(), set()).add(cstr(r.batch_no).strip())
+
+    # --- Source 2: Stock Entry Detail (use_serial_batch_fields) ---
+    sed_batches = frappe.db.sql(
+        f"""
+        SELECT sed.item_code, sed.batch_no
+        FROM `tabStock Entry Detail` AS sed
+        WHERE
+            sed.parent IN ({entry_list})
+            AND sed.batch_no IS NOT NULL
+            AND sed.batch_no != ''
+        """,
+        as_dict=True,
+    )
+
+    for r in sed_batches:
+        valid.setdefault(cstr(r.item_code).strip(), set()).add(cstr(r.batch_no).strip())
+
+    return valid
+
+
+def _get_batch_qty_in_warehouse(batch_no, warehouse):
+    """Return the current stock balance of a batch in a specific warehouse
+    using the Stock Ledger Entry (single source of truth for stock)."""
+
+    qty = frappe.db.sql(
+        """
+        SELECT IFNULL(SUM(actual_qty), 0)
+        FROM `tabStock Ledger Entry`
+        WHERE
+            batch_no = %s
+            AND warehouse = %s
+            AND is_cancelled = 0
+        """,
+        (batch_no, warehouse),
+    )
+    return flt(qty[0][0]) if qty else 0

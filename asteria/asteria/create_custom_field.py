@@ -264,6 +264,24 @@ def setup_custom_fields():
                 "default" : 0
             }
         ],
+        "Purchase Order" : [
+            {
+                "label" : "Sales Order",
+                "fieldname" : "sales_order",
+                "fieldtype" : "Link",
+                "options" : "Sales Order",
+                "read_only" : 1,
+                "insert_after" : "supplier",
+            },
+            {
+                "label" : "Material Request",
+                "fieldname" : "material_request",
+                "fieldtype" : "Link",
+                "options" : "Material Request",
+                "read_only" : 1,
+                "insert_after" : "sales_order",
+            }
+        ],
         
     }
     

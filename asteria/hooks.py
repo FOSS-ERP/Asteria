@@ -141,7 +141,8 @@ after_migrate = "asteria.asteria.create_custom_field.setup_custom_fields"
 
 override_doctype_class = {
 	"Work Order": "asteria.asteria.override.work_order.CustomWorkOrder",
-	"Production Plan" : "asteria.asteria.override.production_plan.CustomProductionPlan"
+	"Production Plan" : "asteria.asteria.override.production_plan.CustomProductionPlan",
+	"Employee Advance" : "asteria.asteria.override.employee_advance.CustomEmployeeAdvance"
 }
 
 # Document Events

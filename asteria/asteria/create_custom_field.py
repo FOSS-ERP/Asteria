@@ -281,8 +281,7 @@ def setup_custom_fields():
                 "read_only" : 1,
                 "insert_after" : "sales_order",
             }
-        ],
-        
+        ],        
     }
     
     create_custom_fields(custom_fields)

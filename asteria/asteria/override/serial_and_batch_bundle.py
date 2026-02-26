@@ -8,6 +8,11 @@ from erpnext.stock.doctype.serial_and_batch_bundle.serial_and_batch_bundle impor
 )
 from frappe.utils import parse_json, cint, cstr, flt, get_link_to_form
 from frappe import _
+from asteria.asteria.doctype.reserve_stock.reserve_stock import (
+	get_batch_qty_in_warehouse,
+	get_reserved_batch_details,
+	get_reserved_stock_references,
+)
 
 
 @frappe.whitelist()
@@ -250,6 +255,8 @@ def get_available_serial_nos(kwargs):
 
 
 def validate(self, method):
+	validate_reserved_stock_usage(self)
+
 	if self.voucher_type == "Stock Entry":
 		stock_entry_type = frappe.db.get_value("Stock Entry", self.voucher_no, "stock_entry_type")
 		
@@ -286,6 +293,90 @@ def validate(self, method):
 					message += _(f"<br><br>To update the correct serial no, use <b>'Add Serial / Batch No'</b> button.")
 					if frappe.db.get_single_value("Stock Settings", "enable_validation_serial_no"):
 						frappe.throw(message)
+
+def validate_reserved_stock_usage(self):
+	serial_nos = []
+	outward_batch_qty = {}
+
+	for entry in self.entries:
+		serial_no = cstr(entry.get("serial_no")).strip()
+		batch_no = cstr(entry.get("batch_no")).strip()
+		warehouse = cstr(entry.get("warehouse")).strip()
+		if serial_no:
+			serial_nos.append(serial_no)
+		if batch_no and warehouse and self.type_of_transaction == "Outward":
+			key = (batch_no, warehouse)
+			outward_batch_qty[key] = outward_batch_qty.get(key, 0) + abs(flt(entry.get("qty")))
+
+	if not serial_nos and not outward_batch_qty:
+		return
+
+	reserved_refs = get_reserved_stock_references(serial_nos=serial_nos, batch_nos=[])
+	reserved_serials = reserved_refs.get("serial_no", {})
+	violating_batches = {}
+
+	if outward_batch_qty:
+		batch_details = get_reserved_batch_details(
+			batch_nos=[k[0] for k in outward_batch_qty.keys()],
+			warehouses=[k[1] for k in outward_batch_qty.keys()],
+			item_code=self.item_code,
+		)
+		for (batch_no, warehouse), outgoing_qty in outward_batch_qty.items():
+			reserved_detail = batch_details.get((batch_no, warehouse))
+			if not reserved_detail:
+				continue
+
+			reserved_qty = flt(reserved_detail.get("reserved_qty"))
+			current_qty = get_batch_qty_in_warehouse(batch_no, warehouse, self.item_code)
+			projected_qty = current_qty - flt(outgoing_qty)
+			if projected_qty < reserved_qty:
+				violating_batches[(batch_no, warehouse)] = {
+					"reserved_qty": reserved_qty,
+					"current_qty": current_qty,
+					"outgoing_qty": outgoing_qty,
+					"reserve_stocks": reserved_detail.get("reserve_stocks", []),
+				}
+
+	if not reserved_serials and not violating_batches:
+		return
+	message_parts = []
+	
+	if reserved_serials:
+		serial_links = ", ".join(
+			frappe.bold(get_link_to_form("Serial No", serial_no))
+			for serial_no in sorted(reserved_serials.keys())
+		)
+		message_parts.append(_("Reserved Serial No: {0}").format(serial_links))
+
+	if violating_batches:
+		for (batch_no, warehouse), data in sorted(violating_batches.items()):
+			message_parts.append(
+				_(
+					"Batch {0} in warehouse {1} cannot be used for qty {2}. <br><br>"
+					"Current qty: {3} <br>Reserved qty: {4}"
+				).format(
+					frappe.bold(get_link_to_form("Batch", batch_no)),
+					frappe.bold(warehouse),
+					frappe.bold(flt(data.get("outgoing_qty"))),
+					frappe.bold(flt(data.get("current_qty"))),
+					frappe.bold(flt(data.get("reserved_qty")))
+				)
+			)
+
+	reserve_stock_links = sorted(
+		set(
+			[
+				*reserved_serials.values(),
+				*[
+					reserve_stock
+					for row in violating_batches.values()
+					for reserve_stock in row.get("reserve_stocks", [])
+				],
+			]
+		)
+	)
+
+	frappe.throw("<br>".join(message_parts))
 
 
 def not_validate_finished_item(self, voucher_detail_no):

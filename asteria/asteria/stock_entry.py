@@ -1,9 +1,15 @@
 import frappe
 from frappe import _
 from frappe.utils import cstr, flt, get_link_to_form
+from asteria.asteria.doctype.reserve_stock.reserve_stock import (
+    get_batch_qty_in_warehouse,
+    get_reserved_batch_details,
+    get_reserved_stock_references,
+)
 
 
 def validate(self, method):
+    # validate_reserved_stock_usage(self)
     warn_manufacture_batch_from_work_order(self)
 
 
@@ -278,3 +284,99 @@ def _get_batch_qty_in_warehouse(batch_no, warehouse):
         (batch_no, warehouse),
     )
     return flt(qty[0][0]) if qty else 0
+
+
+def validate_reserved_stock_usage(self):
+    """Validate reserved serial and warehouse-wise batch floor in Stock Entry rows."""
+    serial_nos = []
+    outward_batch_qty = {}
+
+    for row in self.items:
+        batch_no = cstr(row.get("batch_no")).strip()
+        source_warehouse = cstr(row.get("s_warehouse")).strip()
+        if batch_no and source_warehouse and flt(row.get("qty")) > 0:
+            key = (batch_no, source_warehouse)
+            outward_batch_qty[key] = outward_batch_qty.get(key, 0) + flt(row.get("qty"))
+
+        serial_text = cstr(row.get("serial_no")).strip()
+        if serial_text:
+            serial_nos.extend([s.strip() for s in serial_text.split("\n") if s.strip()])
+
+    if not serial_nos and not outward_batch_qty:
+        return
+
+    reserved_refs = get_reserved_stock_references(serial_nos=serial_nos, batch_nos=[])
+    reserved_serials = reserved_refs.get("serial_no", {})
+    violating_batches = {}
+
+    if outward_batch_qty:
+        batch_details = get_reserved_batch_details(
+            batch_nos=[k[0] for k in outward_batch_qty.keys()],
+            warehouses=[k[1] for k in outward_batch_qty.keys()],
+        )
+        for (batch_no, warehouse), outgoing_qty in outward_batch_qty.items():
+            reserved_detail = batch_details.get((batch_no, warehouse))
+            if not reserved_detail:
+                continue
+
+            reserved_qty = flt(reserved_detail.get("reserved_qty"))
+            current_qty = get_batch_qty_in_warehouse(batch_no, warehouse)
+            projected_qty = current_qty - flt(outgoing_qty)
+            if projected_qty < reserved_qty:
+                violating_batches[(batch_no, warehouse)] = {
+                    "reserved_qty": reserved_qty,
+                    "current_qty": current_qty,
+                    "outgoing_qty": outgoing_qty,
+                    "reserve_stocks": reserved_detail.get("reserve_stocks", []),
+                }
+
+    if not reserved_serials and not violating_batches:
+        return
+
+    message = [_("Reserved Serial / Batch validation failed.")]
+    if reserved_serials:
+        message.append(
+            _("Reserved Serial No: {0}").format(
+                ", ".join(frappe.bold(get_link_to_form("Serial No", s)) for s in sorted(reserved_serials.keys()))
+            )
+        )
+
+    if violating_batches:
+        for (batch_no, warehouse), data in sorted(violating_batches.items()):
+            message.append(
+                _(
+                    "Batch {0} in warehouse {1} cannot be used for qty {2}. "
+                    "Current qty: {3}, Reserved qty: {4}, Remaining after transaction: {5}."
+                ).format(
+                    frappe.bold(get_link_to_form("Batch", batch_no)),
+                    frappe.bold(warehouse),
+                    frappe.bold(flt(data.get("outgoing_qty"))),
+                    frappe.bold(flt(data.get("current_qty"))),
+                    frappe.bold(flt(data.get("reserved_qty"))),
+                    frappe.bold(flt(data.get("current_qty")) - flt(data.get("outgoing_qty"))),
+                )
+            )
+
+    reserve_stock_links = sorted(
+        set(
+            [
+                *reserved_serials.values(),
+                *[
+                    reserve_stock
+                    for row in violating_batches.values()
+                    for reserve_stock in row.get("reserve_stocks", [])
+                ],
+            ]
+        )
+    )
+    if reserve_stock_links:
+        message.append(
+            _("Reserve Stock document: {0}").format(
+                ", ".join(
+                    frappe.bold(get_link_to_form("Reserve Stock", reserve_stock))
+                    for reserve_stock in reserve_stock_links
+                )
+            )
+        )
+
+    frappe.throw("<br>".join(message))

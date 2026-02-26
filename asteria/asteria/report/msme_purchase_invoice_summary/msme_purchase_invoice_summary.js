@@ -31,5 +31,12 @@ frappe.query_reports["MSME Purchase Invoice Summary"] = {
 			fieldtype: "Link",
 			options: "Supplier",
 		},
+		{
+			fieldname: "payment_status",
+			label: __("Payment Status"),
+			fieldtype: "Select",
+			options: "\nAll\nOn Time\nDelay",
+			default: "All",
+		},
 	]
 };

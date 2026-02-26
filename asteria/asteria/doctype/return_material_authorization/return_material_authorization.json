@@ -1,0 +1,466 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "FY24-25-RMA-.####.",
+ "creation": "2024-08-12 18:37:15.834660",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_basic_details_section",
+  "problem_details",
+  "section_break_ffada",
+  "purchase_order_number",
+  "part_number",
+  "part_description",
+  "data_fyvuu",
+  "non_conformance_number",
+  "rate",
+  "purchase_order_item",
+  "column_break_htjgu",
+  "shipping_type",
+  "rma_created_date",
+  "serial_number_details",
+  "batch_number_details",
+  "supplier_name",
+  "supplier",
+  "costing_and_billing_section",
+  "rma_value",
+  "shipper_details_section",
+  "company_name",
+  "company_address",
+  "street_name",
+  "city",
+  "column_break_87tk0",
+  "zip_code",
+  "country",
+  "contact_name",
+  "data_sejya",
+  "phone_number",
+  "email_address",
+  "consignee_address_section",
+  "company",
+  "building_name_number",
+  "data_pa9vr",
+  "city_details",
+  "zip_code_2",
+  "country_name",
+  "column_break_otgcl",
+  "department_details",
+  "contact_number",
+  "email_details",
+  "gst_number",
+  "supplier_spoc",
+  "shipment_details_section",
+  "value",
+  "weight_kgs",
+  "no_of_boxes_or_carton",
+  "contents",
+  "column_break_spar6",
+  "special_instruction",
+  "po_number",
+  "insurance_required",
+  "logistics_details_section",
+  "material_shipped_date",
+  "column_break_opoxw",
+  "logistics_spoc",
+  "logistics_tracking_details_section",
+  "tracking_details",
+  "inward_transit_tracking_details",
+  "supplier_rma_number",
+  "item_receipt_details_section",
+  "item_received_date",
+  "column_break_uwbde",
+  "handed_over_to_iqc"
+ ],
+ "fields": [
+  {
+   "description": "To be filled By Incoming Quality Team",
+   "fieldname": "item_basic_details_section",
+   "fieldtype": "Section Break",
+   "label": "Item Basic Details"
+  },
+  {
+   "fieldname": "problem_details",
+   "fieldtype": "Small Text",
+   "label": "Problem Details"
+  },
+  {
+   "fieldname": "section_break_ffada",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "purchase_order_number",
+   "fieldtype": "Link",
+   "label": "Purchase Order Number",
+   "options": "Purchase Order"
+  },
+  {
+   "fieldname": "part_number",
+   "fieldtype": "Link",
+   "label": "Part Number",
+   "options": "Item"
+  },
+  {
+   "fetch_from": "item.item_name",
+   "fieldname": "part_description",
+   "fieldtype": "Small Text",
+   "label": "Part Description"
+  },
+  {
+   "fieldname": "data_fyvuu",
+   "fieldtype": "Int",
+   "label": "Quantity"
+  },
+  {
+   "fieldname": "non_conformance_number",
+   "fieldtype": "Link",
+   "label": "Non Conformance Number",
+   "options": "Non Conformance"
+  },
+  {
+   "fieldname": "column_break_htjgu",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "shipping_type",
+   "fieldtype": "Select",
+   "label": "Shipping Type",
+   "options": "Domestic\nInternational"
+  },
+  {
+   "fieldname": "rma_created_date",
+   "fieldtype": "Date",
+   "label": "RMA Created Date"
+  },
+  {
+   "fieldname": "serial_number_details",
+   "fieldtype": "Small Text",
+   "label": "Serial Number Details"
+  },
+  {
+   "fieldname": "batch_number_details",
+   "fieldtype": "Small Text",
+   "label": "Batch Number Details"
+  },
+  {
+   "fetch_from": "purchase_order_number.supplier",
+   "fieldname": "supplier_name",
+   "fieldtype": "Link",
+   "label": "Supplier",
+   "options": "Supplier"
+  },
+  {
+   "fieldname": "costing_and_billing_section",
+   "fieldtype": "Section Break",
+   "label": "Costing and Billing"
+  },
+  {
+   "description": "Quotation Approved Value",
+   "fieldname": "rma_value",
+   "fieldtype": "Int",
+   "label": "Rework Cost"
+  },
+  {
+   "description": "Booking Sheet Information- To be filled by SCM",
+   "fieldname": "shipper_details_section",
+   "fieldtype": "Section Break",
+   "label": "Shipper Details"
+  },
+  {
+   "fieldname": "company_name",
+   "fieldtype": "Select",
+   "label": "Company Name",
+   "options": "Asteria Aerospace Limited"
+  },
+  {
+   "fieldname": "company_address",
+   "fieldtype": "Select",
+   "label": "Company Address",
+   "options": "3rd floor, Tellus Spaces, RWF West Colony"
+  },
+  {
+   "fieldname": "street_name",
+   "fieldtype": "Select",
+   "label": "Street Name",
+   "options": "Yelahanka New Town"
+  },
+  {
+   "fieldname": "city",
+   "fieldtype": "Select",
+   "label": "City",
+   "options": "Bengaluru"
+  },
+  {
+   "fieldname": "column_break_87tk0",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "zip_code",
+   "fieldtype": "Select",
+   "label": "Zip Code 1",
+   "options": "560064"
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Select",
+   "label": "Country",
+   "options": "India"
+  },
+  {
+   "fieldname": "contact_name",
+   "fieldtype": "Link",
+   "label": "Contact Name",
+   "options": "User"
+  },
+  {
+   "fieldname": "data_sejya",
+   "fieldtype": "Select",
+   "label": "Department Name",
+   "options": "Logistics"
+  },
+  {
+   "fieldname": "phone_number",
+   "fieldtype": "Select",
+   "label": "Phone Number",
+   "options": "9353963055"
+  },
+  {
+   "fieldname": "email_address",
+   "fieldtype": "Select",
+   "label": "Email Address",
+   "options": "venkatesh.k@asteria.co.in"
+  },
+  {
+   "description": "Information to be filled by SCM",
+   "fieldname": "consignee_address_section",
+   "fieldtype": "Section Break",
+   "label": "Consignee Address"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Data",
+   "label": "Company"
+  },
+  {
+   "fieldname": "building_name_number",
+   "fieldtype": "Data",
+   "label": "Building Name Number"
+  },
+  {
+   "fieldname": "data_pa9vr",
+   "fieldtype": "Data",
+   "label": "Street Name "
+  },
+  {
+   "fieldname": "city_details",
+   "fieldtype": "Data",
+   "label": "City Details"
+  },
+  {
+   "fieldname": "zip_code_2",
+   "fieldtype": "Int",
+   "label": "Zip Code 2"
+  },
+  {
+   "fieldname": "country_name",
+   "fieldtype": "Data",
+   "label": "Country Name"
+  },
+  {
+   "fieldname": "column_break_otgcl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "department_details",
+   "fieldtype": "Data",
+   "label": "Department Details"
+  },
+  {
+   "fieldname": "contact_number",
+   "fieldtype": "Int",
+   "label": "Contact Number"
+  },
+  {
+   "fieldname": "email_details",
+   "fieldtype": "Data",
+   "label": "Email Details"
+  },
+  {
+   "fieldname": "gst_number",
+   "fieldtype": "Int",
+   "label": "GST Number"
+  },
+  {
+   "fieldname": "supplier_spoc",
+   "fieldtype": "Data",
+   "label": "Supplier SPOC"
+  },
+  {
+   "description": "Information to be filled by Logistics",
+   "fieldname": "shipment_details_section",
+   "fieldtype": "Section Break",
+   "label": "Shipment Details"
+  },
+  {
+   "fieldname": "value",
+   "fieldtype": "Int",
+   "label": "Value"
+  },
+  {
+   "fieldname": "weight_kgs",
+   "fieldtype": "Int",
+   "label": "Weight kgs"
+  },
+  {
+   "fieldname": "no_of_boxes_or_carton",
+   "fieldtype": "Data",
+   "label": "No of Boxes or Carton"
+  },
+  {
+   "fieldname": "contents",
+   "fieldtype": "Data",
+   "label": "Contents"
+  },
+  {
+   "fieldname": "column_break_spar6",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "special_instruction",
+   "fieldtype": "Data",
+   "label": "Special Instruction"
+  },
+  {
+   "fieldname": "po_number",
+   "fieldtype": "Data",
+   "label": "PO Number"
+  },
+  {
+   "fieldname": "insurance_required",
+   "fieldtype": "Select",
+   "label": "Insurance Required ",
+   "options": "Yes\nNo"
+  },
+  {
+   "description": "Information to be filled by Logistics Team",
+   "fieldname": "logistics_details_section",
+   "fieldtype": "Section Break",
+   "label": "Logistics Details"
+  },
+  {
+   "fieldname": "material_shipped_date",
+   "fieldtype": "Date",
+   "label": "Material Shipped Date"
+  },
+  {
+   "fieldname": "column_break_opoxw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "logistics_spoc",
+   "fieldtype": "Link",
+   "label": "Logistics SPOC",
+   "options": "User"
+  },
+  {
+   "description": "Tracking details shall be filled by Logistics",
+   "fieldname": "logistics_tracking_details_section",
+   "fieldtype": "Section Break",
+   "label": "Tracking Details"
+  },
+  {
+   "fieldname": "tracking_details",
+   "fieldtype": "Small Text",
+   "label": "Outward Transit Tracking Details"
+  },
+  {
+   "fieldname": "inward_transit_tracking_details",
+   "fieldtype": "Small Text",
+   "label": "Inward Transit Tracking Details"
+  },
+  {
+   "description": "To be filled by SCM",
+   "fieldname": "supplier_rma_number",
+   "fieldtype": "Data",
+   "label": "Supplier RMA Number"
+  },
+  {
+   "description": "Information to be filled by logistics",
+   "fieldname": "item_receipt_details_section",
+   "fieldtype": "Section Break",
+   "label": "Item Receipt Details"
+  },
+  {
+   "fieldname": "item_received_date",
+   "fieldtype": "Date",
+   "label": "Item Received Date"
+  },
+  {
+   "fieldname": "column_break_uwbde",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "handed_over_to_iqc",
+   "fieldtype": "Date",
+   "label": "Handed over to IQC"
+  },
+  {
+   "fetch_from": "supplier_name.supplier_name",
+   "fieldname": "supplier",
+   "fieldtype": "Data",
+   "label": "Supplier Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "label": "Rate"
+  },
+  {
+   "fieldname": "purchase_order_item",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "purchase_order_item"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "group": "Quotation",
+   "link_doctype": "Quotation",
+   "link_fieldname": "name"
+  },
+  {
+   "group": "Purchase Order",
+   "link_doctype": "Purchase Order",
+   "link_fieldname": "name"
+  }
+ ],
+ "modified": "2026-02-26 11:52:44.204673",
+ "modified_by": "Administrator",
+ "module": "Asteria",
+ "name": "Return Material Authorization",
+ "naming_rule": "Expression (old style)",
+ "owner": "systemadmin@asteria.co.in",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

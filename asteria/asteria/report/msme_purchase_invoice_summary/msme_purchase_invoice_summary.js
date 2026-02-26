@@ -13,14 +13,14 @@ frappe.query_reports["MSME Purchase Invoice Summary"] = {
 		},
 		{
 			fieldname: "from_date",
-			label: __("From Date"),
+			label: __("Purchase Invoice From Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.add_months(frappe.datetime.get_today(), -1),
+			default: frappe.datetime.add_months(frappe.datetime.get_today(), -3),
 			reqd: 1,
 		},
 		{
 			fieldname: "to_date",
-			label: __("To Date"),
+			label: __("Purchase Invoice To Date"),
 			fieldtype: "Date",
 			default: frappe.datetime.get_today(),
 			reqd: 1,
@@ -30,6 +30,18 @@ frappe.query_reports["MSME Purchase Invoice Summary"] = {
 			label: __("Supplier"),
 			fieldtype: "Link",
 			options: "Supplier",
+		},
+		{
+			fieldname: "purchase_invoice",
+			label: __("Purchase Invoice"),
+			fieldtype: "Link",
+			options: "Purchase Invoice",
+		},
+		{
+			fieldname: "mode_of_payment",
+			label: __("Payment Mode"),
+			fieldtype: "Link",
+			options: "Mode of Payment",
 		},
 		{
 			fieldname: "payment_status",

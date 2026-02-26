@@ -19,7 +19,7 @@ frappe.ui.form.on("Reserve Stock", {
 		});
 
 		if (!frm.is_new() && frm.doc.docstatus === 1 && frm.doc.status !== "Unreserved") {
-			frm.add_custom_button(__("Unreserved"), () => {
+			frm.add_custom_button(__("Unreserve"), () => {
 				frappe.confirm(__("Are you sure you want to mark this Reserve Stock as Unreserved?"), () => {
 					frappe.call({
 						method: "asteria.asteria.doctype.reserve_stock.reserve_stock.mark_as_unreserved",

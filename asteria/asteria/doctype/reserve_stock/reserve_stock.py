@@ -149,16 +149,19 @@ def get_batch_qty_in_warehouse(batch_no, warehouse, item_code=None):
 	)
 	batch_balance = flt(qty[0][0]) if qty else 0
 
-	# Fallback for old serial/batch fields flow: balance may be available at item+warehouse level
-	# before batch-ledger rows are created during submit.
-	if item_code and batch_balance <= 0:
-		bin_qty = frappe.db.get_value(
-			"Bin",
-			{"item_code": item_code, "warehouse": warehouse},
-			"actual_qty",
-		)
-		if bin_qty is not None:
-			return flt(bin_qty)
+	# Fallback for old serial/batch fields flow: if no batch-ledger yet, use Bin balance.
+	if batch_balance <= 0:
+		if not item_code:
+			item_code = frappe.db.get_value("Batch", batch_no, "item")
+
+		if item_code:
+			bin_qty = frappe.db.get_value(
+				"Bin",
+				{"item_code": item_code, "warehouse": warehouse},
+				"actual_qty",
+			)
+			if bin_qty is not None:
+				return flt(bin_qty)
 
 	return batch_balance
 

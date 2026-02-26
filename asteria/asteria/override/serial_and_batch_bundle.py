@@ -255,7 +255,7 @@ def get_available_serial_nos(kwargs):
 
 
 def validate(self, method):
-	validate_reserved_stock_usage(self)
+	# validate_reserved_stock_usage(self)
 
 	if self.voucher_type == "Stock Entry":
 		stock_entry_type = frappe.db.get_value("Stock Entry", self.voucher_no, "stock_entry_type")

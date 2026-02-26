@@ -9,7 +9,7 @@ from asteria.asteria.doctype.reserve_stock.reserve_stock import (
 
 
 def validate(self, method):
-    validate_reserved_stock_usage(self)
+    # validate_reserved_stock_usage(self)
     warn_manufacture_batch_from_work_order(self)
 
 

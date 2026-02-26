@@ -51,7 +51,7 @@
  "is_standard": "Yes",
  "javascript": "frappe.query_reports[\"MSME PINV Payment Summary\"] = {\n    \"filters\": [\n        {\n            \"fieldname\": \"from_date\",\n            \"label\": __(\"From Date\"),\n            \"fieldtype\": \"Date\"\n        },\n        {\n            \"fieldname\": \"to_date\",\n            \"label\": __(\"To Date\"),\n            \"fieldtype\": \"Date\"\n        },\n        {\n            \"fieldname\": \"supplier\",\n            \"label\": __(\"Supplier\"),\n            \"fieldtype\": \"Link\",\n            \"options\": \"Supplier\"\n        },\n        {\n            \"fieldname\": \"mode_of_payment\",\n            \"label\": __(\"Mode of Payment\"),\n            \"fieldtype\": \"Link\",\n            \"options\": \"Mode of Payment\"\n        },\n        {\n            \"fieldname\": \"payment_status\",\n            \"label\": __(\"Payment Status\"),\n            \"fieldtype\": \"Select\",\n            \"\"options\": \"\\nAll \\nOn Time \\nDelay\"\n        }\n        \n        \n    ]\n};\n",
  "letter_head": null,
- "modified": "2026-02-18 11:33:06.250786",
+ "modified": "2026-02-24 08:43:37.210496",
  "modified_by": "Administrator",
  "module": "Asteria",
  "name": "MSME Purchase Invoice Summary",

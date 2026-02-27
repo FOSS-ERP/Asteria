@@ -255,7 +255,7 @@ def get_available_serial_nos(kwargs):
 
 
 def validate(self, method):
-	# validate_reserved_stock_usage(self)
+	validate_reserved_stock_usage(self)
 
 	if self.voucher_type == "Stock Entry":
 		stock_entry_type = frappe.db.get_value("Stock Entry", self.voucher_no, "stock_entry_type")
@@ -302,9 +302,13 @@ def validate_reserved_stock_usage(self):
 		serial_no = cstr(entry.get("serial_no")).strip()
 		batch_no = cstr(entry.get("batch_no")).strip()
 		warehouse = cstr(entry.get("warehouse")).strip()
+
 		if serial_no:
 			serial_nos.append(serial_no)
-		if batch_no and warehouse and self.type_of_transaction == "Outward":
+
+		# For Serial and Batch Bundle, qty can be negative for Outward rows.
+		# Use absolute qty so that both +ve and -ve entries are counted correctly.
+		if self.type_of_transaction == "Outward" and batch_no and warehouse and flt(entry.get("qty")):
 			key = (batch_no, warehouse)
 			outward_batch_qty[key] = outward_batch_qty.get(key, 0) + abs(flt(entry.get("qty")))
 
@@ -319,7 +323,6 @@ def validate_reserved_stock_usage(self):
 		batch_details = get_reserved_batch_details(
 			batch_nos=[k[0] for k in outward_batch_qty.keys()],
 			warehouses=[k[1] for k in outward_batch_qty.keys()],
-			item_code=self.item_code,
 		)
 		for (batch_no, warehouse), outgoing_qty in outward_batch_qty.items():
 			reserved_detail = batch_details.get((batch_no, warehouse))
@@ -327,8 +330,9 @@ def validate_reserved_stock_usage(self):
 				continue
 
 			reserved_qty = flt(reserved_detail.get("reserved_qty"))
-			current_qty = get_batch_qty_in_warehouse(batch_no, warehouse, self.item_code)
+			current_qty = get_batch_qty_in_warehouse(batch_no, warehouse)
 			projected_qty = current_qty - flt(outgoing_qty)
+
 			if projected_qty < reserved_qty:
 				violating_batches[(batch_no, warehouse)] = {
 					"reserved_qty": reserved_qty,
@@ -346,7 +350,11 @@ def validate_reserved_stock_usage(self):
 			frappe.bold(get_link_to_form("Serial No", serial_no))
 			for serial_no in sorted(reserved_serials.keys())
 		)
-		message_parts.append(_("Reserved Serial No: {0}").format(serial_links))
+		message_parts.append(
+			_(
+				"The following Serial Nos are currently reserved and cannot be used in this transaction: {0}."
+			).format(serial_links)
+		)
 
 	if violating_batches:
 		for (batch_no, warehouse), data in sorted(violating_batches.items()):

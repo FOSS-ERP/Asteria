@@ -6,54 +6,17 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "item_code",
-  "item_name",
-  "has_serial_no",
-  "has_batch_no",
+  "column_break_lsuy",
   "column_break_iksg",
-  "status",
   "reserved_by",
   "section_break_rkbw",
-  "table_zbqd",
+  "items",
   "amended_from"
  ],
  "fields": [
   {
-   "fieldname": "item_code",
-   "fieldtype": "Link",
-   "label": "Item Code",
-   "options": "Item"
-  },
-  {
-   "fieldname": "item_name",
-   "fieldtype": "Data",
-   "label": "Item Name",
-   "read_only": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "has_serial_no",
-   "fieldtype": "Check",
-   "label": "Has Serial No"
-  },
-  {
-   "default": "0",
-   "fieldname": "has_batch_no",
-   "fieldtype": "Check",
-   "label": "Has Batch No"
-  },
-  {
    "fieldname": "column_break_iksg",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Status",
-   "no_copy": 1,
-   "options": "Reserved\nUnreserved",
-   "read_only": 1
   },
   {
    "default": "__user",
@@ -68,11 +31,6 @@
    "fieldtype": "Section Break"
   },
   {
-   "fieldname": "table_zbqd",
-   "fieldtype": "Table",
-   "options": "Serial and Batch Entry"
-  },
-  {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
@@ -81,13 +39,25 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "allow_bulk_edit": 1,
+   "allow_on_submit": 1,
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "Stock Reservation Items"
+  },
+  {
+   "fieldname": "column_break_lsuy",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-20 19:05:30.804651",
+ "modified": "2026-02-27 10:49:49.342004",
  "modified_by": "Administrator",
  "module": "Asteria",
  "name": "Reserve Stock",

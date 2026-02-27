@@ -13,14 +13,22 @@ class ReserveStock(Document):
 		validate_batch_reservation_availability(self)
 
 	def before_submit(self):
-		if not self.status:
-			self.status = "Reserved"
+		# Default row status to "Reserved" if not explicitly set
+		for row in getattr(self, "items", []) or []:
+			if not cstr(row.get("status")).strip():
+				row.status = "Reserved"
+
+		validate_batch_reservation_availability(self)
+
+	def on_update_after_submit(self):
+		# Re-validate whenever a submitted Reserve Stock is edited (e.g. row status changed)
+		validate_child_row_warehouses(self)
 		validate_batch_reservation_availability(self)
 
 
 def validate_child_row_warehouses(doc):
-	"""Warehouse is mandatory in every Serial and Batch Entry row."""
-	for row in doc.table_zbqd:
+	"""Warehouse is mandatory in every Stock Reservation Items row."""
+	for row in getattr(doc, "items", []) or []:
 		warehouse = cstr(row.get("warehouse")).strip()
 		if not warehouse:
 			frappe.throw(
@@ -40,13 +48,14 @@ def get_reserved_stock_references(serial_nos=None, batch_nos=None):
 	if serial_nos:
 		serial_rows = frappe.db.sql(
 			"""
-			SELECT sbe.serial_no, rs.name
-			FROM `tabSerial and Batch Entry` AS sbe
-			INNER JOIN `tabReserve Stock` AS rs ON rs.name = sbe.parent
+			SELECT sri.serial_no, rs.name
+			FROM `tabStock Reservation Items` AS sri
+			INNER JOIN `tabReserve Stock` AS rs ON rs.name = sri.parent
 			WHERE
-				sbe.parenttype = 'Reserve Stock'
-				AND rs.status = 'Reserved'
-				AND sbe.serial_no IN %(serial_nos)s
+				sri.parenttype = 'Reserve Stock'
+				AND rs.docstatus = 1
+				AND sri.status = 'Reserved'
+				AND sri.serial_no IN %(serial_nos)s
 			""",
 			{"serial_nos": tuple(serial_nos)},
 			as_dict=True,
@@ -56,13 +65,14 @@ def get_reserved_stock_references(serial_nos=None, batch_nos=None):
 	if batch_nos:
 		batch_rows = frappe.db.sql(
 			"""
-			SELECT sbe.batch_no, rs.name
-			FROM `tabSerial and Batch Entry` AS sbe
-			INNER JOIN `tabReserve Stock` AS rs ON rs.name = sbe.parent
+			SELECT sri.batch_no, rs.name
+			FROM `tabStock Reservation Items` AS sri
+			INNER JOIN `tabReserve Stock` AS rs ON rs.name = sri.parent
 			WHERE
-				sbe.parenttype = 'Reserve Stock'
-				AND rs.status = 'Reserved'
-				AND sbe.batch_no IN %(batch_nos)s
+				sri.parenttype = 'Reserve Stock'
+				AND rs.docstatus = 1
+				AND sri.status = 'Reserved'
+				AND sri.batch_no IN %(batch_nos)s
 			""",
 			{"batch_nos": tuple(batch_nos)},
 			as_dict=True,
@@ -78,26 +88,26 @@ def get_reserved_batch_details(batch_nos=None, warehouses=None, item_code=None, 
 	warehouses = [cstr(v).strip() for v in (warehouses or []) if cstr(v).strip()]
 
 	conditions = [
-		"sbe.parenttype = 'Reserve Stock'",
-		"rs.status = 'Reserved'",
+		"sri.parenttype = 'Reserve Stock'",
+		"sri.status = 'Reserved'",
 		"rs.docstatus = 1",
-		"sbe.batch_no IS NOT NULL",
-		"sbe.batch_no != ''",
-		"sbe.warehouse IS NOT NULL",
-		"sbe.warehouse != ''",
+		"sri.batch_no IS NOT NULL",
+		"sri.batch_no != ''",
+		"sri.warehouse IS NOT NULL",
+		"sri.warehouse != ''",
 	]
 	values = {}
 
 	if batch_nos:
-		conditions.append("sbe.batch_no IN %(batch_nos)s")
+		conditions.append("sri.batch_no IN %(batch_nos)s")
 		values["batch_nos"] = tuple(set(batch_nos))
 
 	if warehouses:
-		conditions.append("sbe.warehouse IN %(warehouses)s")
+		conditions.append("sri.warehouse IN %(warehouses)s")
 		values["warehouses"] = tuple(set(warehouses))
 
 	if item_code:
-		conditions.append("rs.item_code = %(item_code)s")
+		conditions.append("sri.item_code = %(item_code)s")
 		values["item_code"] = item_code
 
 	if exclude_reserve_stock:
@@ -107,14 +117,14 @@ def get_reserved_batch_details(batch_nos=None, warehouses=None, item_code=None, 
 	rows = frappe.db.sql(
 		f"""
 		SELECT
-			sbe.batch_no,
-			sbe.warehouse,
-			SUM(ABS(IFNULL(sbe.qty, 0))) AS reserved_qty,
+			sri.batch_no,
+			sri.warehouse,
+			SUM(ABS(IFNULL(sri.qty, 0))) AS reserved_qty,
 			GROUP_CONCAT(DISTINCT rs.name) AS reserve_stocks
-		FROM `tabSerial and Batch Entry` AS sbe
-		INNER JOIN `tabReserve Stock` AS rs ON rs.name = sbe.parent
+		FROM `tabStock Reservation Items` AS sri
+		INNER JOIN `tabReserve Stock` AS rs ON rs.name = sri.parent
 		WHERE {" AND ".join(conditions)}
-		GROUP BY sbe.batch_no, sbe.warehouse
+		GROUP BY sri.batch_no, sri.warehouse
 		""",
 		values,
 		as_dict=True,
@@ -131,48 +141,145 @@ def get_reserved_batch_details(batch_nos=None, warehouses=None, item_code=None, 
 	return reserved_batch_details
 
 
+@frappe.whitelist()
 def get_batch_qty_in_warehouse(batch_no, warehouse, item_code=None):
-	conditions = ["batch_no = %(batch_no)s", "warehouse = %(warehouse)s", "is_cancelled = 0"]
-	values = {"batch_no": batch_no, "warehouse": warehouse}
+	"""Return batch qty so it matches Stock Ledger / Batch Balance report.
 
+	Includes both:
+	1. Legacy SLE rows (batch_no set directly on SLE)
+	2. SBB-based rows (batch in Serial and Batch Entry, SLE has serial_and_batch_bundle)
+
+	ERPNext's get_batch_qty uses only the SBB join and can undercount when some
+	stock was received without Serial and Batch Bundle.
+	"""
+	values = {"batch_no": batch_no, "warehouse": warehouse}
+	item_filter = "AND sle.item_code = %(item_code)s" if item_code else ""
 	if item_code:
-		conditions.append("item_code = %(item_code)s")
 		values["item_code"] = item_code
 
-	qty = frappe.db.sql(
+	# 1. Legacy: SLE with batch_no (no SBB or SBB empty)
+	qty_legacy = frappe.db.sql(
 		f"""
-		SELECT IFNULL(SUM(actual_qty), 0) AS qty
-		FROM `tabStock Ledger Entry`
-		WHERE {" AND ".join(conditions)}
+		SELECT IFNULL(SUM(sle.actual_qty), 0)
+		FROM `tabStock Ledger Entry` sle
+		WHERE sle.batch_no = %(batch_no)s
+		  AND sle.warehouse = %(warehouse)s
+		  AND sle.is_cancelled = 0
+		  AND (sle.serial_and_batch_bundle IS NULL OR sle.serial_and_batch_bundle = '')
+		  {item_filter}
 		""",
 		values,
 	)
-	batch_balance = flt(qty[0][0]) if qty else 0
+	legacy = flt(qty_legacy[0][0]) if qty_legacy else 0
 
-	# Fallback for old serial/batch fields flow: if no batch-ledger yet, use Bin balance.
-	if batch_balance <= 0:
-		if not item_code:
-			item_code = frappe.db.get_value("Batch", batch_no, "item")
+	# 2. SBB-based: batch qty from Serial and Batch Entry (SLE has SBB, no batch_no on SLE)
+	qty_sbb = frappe.db.sql(
+		f"""
+		SELECT IFNULL(SUM(sbe.qty), 0)
+		FROM `tabSerial and Batch Entry` sbe
+		INNER JOIN `tabSerial and Batch Bundle` sbb ON sbe.parent = sbb.name
+		INNER JOIN `tabStock Ledger Entry` sle ON sle.serial_and_batch_bundle = sbb.name
+		WHERE sbe.batch_no = %(batch_no)s
+		  AND sbe.warehouse = %(warehouse)s
+		  AND sle.is_cancelled = 0
+		  AND sbb.docstatus = 1
+		  AND (sle.batch_no IS NULL OR sle.batch_no = '')
+		  {item_filter}
+		""",
+		values,
+	)
+	sbb = flt(qty_sbb[0][0]) if qty_sbb else 0
 
+	return legacy + sbb
+
+
+@frappe.whitelist()
+def get_available_warehouses_for_reserve_row(item_code=None, serial_no=None, batch_no=None):
+	"""Return list of warehouses where the given serial / batch currently has stock.
+
+	- If serial_no is provided: return its current warehouse (if any and Active).
+	- If batch_no is provided: return all warehouses where that batch has positive qty,
+	  combining both legacy SLE rows and SBB-based rows.
+	"""
+	item_code = cstr(item_code).strip() or None
+	serial_no = cstr(serial_no).strip() or None
+	batch_no = cstr(batch_no).strip() or None
+
+	warehouses = set()
+
+	# 1) Serial No current warehouse
+	if serial_no:
+		serial_wh = frappe.db.get_value(
+			"Serial No",
+			{"name": serial_no, "status": "Active"},
+			"warehouse",
+		)
+		if serial_wh:
+			warehouses.add(cstr(serial_wh).strip())
+
+	# 2) Batch-wise warehouses with positive qty
+	if batch_no:
+		values = {"batch_no": batch_no}
+		item_filter = ""
 		if item_code:
-			bin_qty = frappe.db.get_value(
-				"Bin",
-				{"item_code": item_code, "warehouse": warehouse},
-				"actual_qty",
-			)
-			if bin_qty is not None:
-				return flt(bin_qty)
+			item_filter = "AND sle.item_code = %(item_code)s"
+			values["item_code"] = item_code
 
-	return batch_balance
+		# 2a) Legacy SLE rows with batch_no directly on SLE
+		legacy_rows = frappe.db.sql(
+			f"""
+			SELECT sle.warehouse, SUM(sle.actual_qty) AS qty
+			FROM `tabStock Ledger Entry` sle
+			WHERE sle.batch_no = %(batch_no)s
+			  AND sle.is_cancelled = 0
+			  {item_filter}
+			GROUP BY sle.warehouse
+			HAVING SUM(sle.actual_qty) > 0
+			""",
+			values,
+			as_dict=True,
+		)
+		for row in legacy_rows:
+			if row.warehouse:
+				warehouses.add(cstr(row.warehouse).strip())
+
+		# 2b) SBB-based rows where SLE links to Serial and Batch Bundle
+		sbb_rows = frappe.db.sql(
+			f"""
+			SELECT sbe.warehouse, SUM(sbe.qty) AS qty
+			FROM `tabSerial and Batch Entry` AS sbe
+			INNER JOIN `tabSerial and Batch Bundle` AS sbb ON sbe.parent = sbb.name
+			INNER JOIN `tabStock Ledger Entry` AS sle ON sle.serial_and_batch_bundle = sbb.name
+			WHERE sbe.batch_no = %(batch_no)s
+			  AND sle.is_cancelled = 0
+			  AND sbb.docstatus = 1
+			  {item_filter}
+			GROUP BY sbe.warehouse
+			HAVING SUM(sbe.qty) > 0
+			""",
+			values,
+			as_dict=True,
+		)
+		for row in sbb_rows:
+			if row.warehouse:
+				warehouses.add(cstr(row.warehouse).strip())
+
+	if not warehouses:
+		return []
+
+	# Return sorted unique list
+	return sorted(warehouses)
 
 
 def validate_batch_reservation_availability(doc):
 	"""Ensure requested reserved qty is available in selected warehouse for each batch."""
-	if cstr(doc.status).strip() == "Unreserved":
-		return
-
 	requested_by_key = {}
-	for row in doc.table_zbqd:
+	for row in getattr(doc, "items", []) or []:
+		# Only validate rows that are (or will be) reserved
+		status = cstr(row.get("status")).strip() or "Reserved"
+		if status != "Reserved":
+			continue
+
 		batch_no = cstr(row.get("batch_no")).strip()
 		warehouse = cstr(row.get("warehouse")).strip()
 		if not batch_no:
@@ -203,12 +310,11 @@ def validate_batch_reservation_availability(doc):
 	reserved_other = get_reserved_batch_details(
 		batch_nos=[k[0] for k in requested_by_key],
 		warehouses=[k[1] for k in requested_by_key],
-		item_code=doc.item_code,
 		exclude_reserve_stock=doc.name,
 	)
 
 	for (batch_no, warehouse), requested_qty in requested_by_key.items():
-		current_qty = get_batch_qty_in_warehouse(batch_no, warehouse, doc.item_code)
+		current_qty = get_batch_qty_in_warehouse(batch_no, warehouse)
 		already_reserved_qty = flt(reserved_other.get((batch_no, warehouse), {}).get("reserved_qty"))
 		available_to_reserve = current_qty - already_reserved_qty
 
@@ -231,15 +337,20 @@ def validate_batch_reservation_availability(doc):
 
 @frappe.whitelist()
 def mark_as_unreserved(name: str):
-	"""Mark submitted Reserve Stock as Unreserved from form button."""
+	"""Mark submitted Reserve Stock rows as Unreserved from form button."""
 	doc = frappe.get_doc("Reserve Stock", name)
 	doc.check_permission("write")
 
 	if doc.docstatus != 1:
 		frappe.throw(_("Unreserve is allowed only for submitted Reserve Stock documents."))
 
-	if doc.status == "Unreserved":
-		return {"status": doc.status}
+	has_reserved_rows = False
+	for row in getattr(doc, "items", []) or []:
+		if cstr(row.get("status")).strip() != "Unreserved":
+			has_reserved_rows = True
+			frappe.db.set_value("Stock Reservation Items", row.name, "status", "Unreserved")
 
-	doc.db_set("status", "Unreserved", update_modified=True)
+	if not has_reserved_rows:
+		return {"status": "Unreserved"}
+
 	return {"status": "Unreserved"}

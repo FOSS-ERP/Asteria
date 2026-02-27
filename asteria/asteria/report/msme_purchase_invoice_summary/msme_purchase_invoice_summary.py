@@ -336,12 +336,12 @@ def _build_row(pi, payment, payments, invoice_amount, paid_amount, unpaid_amount
         balance = 0
     
     # Due In: only for invoices that are NOT fully paid
-    #   If status != "Paid" and due_date exists:
-    #       Due In = today - due_date (in days)
+    #   If status != "Paid" and both due_date & posting_date exist:
+    #       Due In = due_date - posting_date (in days)
     #   If status == "Paid": Due In is blank
     due_in = None
-    if pi.status != "Paid" and pi.due_date:
-        due_in = (getdate(today()) - getdate(pi.due_date)).days
+    if pi.status != "Paid" and pi.due_date and pi.posting_date:
+        due_in = (getdate(pi.due_date) - getdate(pi.posting_date)).days
 
     # Paid Date (new column):
     #   Only for PI row, when status is Paid -> last Payment Entry posting_date

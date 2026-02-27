@@ -9,7 +9,7 @@ from asteria.asteria.doctype.reserve_stock.reserve_stock import (
 
 
 def validate(self, method):
-    # validate_reserved_stock_usage(self)
+    validate_reserved_stock_usage(self)
     warn_manufacture_batch_from_work_order(self)
 
 
@@ -336,8 +336,13 @@ def validate_reserved_stock_usage(self):
     message = [_("Reserved Serial / Batch validation failed.")]
     if reserved_serials:
         message.append(
-            _("Reserved Serial No: {0}").format(
-                ", ".join(frappe.bold(get_link_to_form("Serial No", s)) for s in sorted(reserved_serials.keys()))
+            _(
+                "The following Serial Nos are currently reserved and cannot be used in this transaction: {0}."
+            ).format(
+                ", ".join(
+                    frappe.bold(get_link_to_form("Serial No", s))
+                    for s in sorted(reserved_serials.keys())
+                )
             )
         )
 

@@ -72,6 +72,11 @@ def get_data(filters):
         # 10. Advance / Purchase Order Payment Entries (no PI/JE reference)
         advance_payments = _get_advance_payment_entries(filters)
 
+    # Unallocated portion of PEs created against supplier invoice → show as advance (once per PE)
+    unallocated_pe_list = _get_payment_entry_unallocated(filters, payment_map_pi)
+    unallocated_by_pe = {x.name: x for x in unallocated_pe_list}
+    seen_unallocated_pe = set()
+
     data = []
     for pi in purchase_invoices:
         payments = payment_map_pi.get(pi.name, [])
@@ -223,6 +228,11 @@ def get_data(filters):
                     report_date=report_date,
                     show_invoice_details=False,  # Payment details only
                 ))
+                # If this PE has unallocated amount, add one advance row (once per PE)
+                pe_name = p.payment_entry
+                if pe_name in unallocated_by_pe and pe_name not in seen_unallocated_pe:
+                    seen_unallocated_pe.add(pe_name)
+                    data.append(_build_unallocated_advance_row(unallocated_by_pe[pe_name], report_date=report_date))
         
         # Add Journal Entry rows for ALL linked JEs
         for je_ref in je_refs:
@@ -654,6 +664,89 @@ def _get_payment_allocations_by_pi(filters):
         r.base_allocated_amount = base_alloc
         result.setdefault(r.purchase_invoice, []).append(r)
     return result
+
+
+def _get_payment_entry_unallocated(filters, payment_map_pi):
+    """For Payment Entries that have at least one PI allocation in scope, compute the
+    unallocated (excess) amount: base_paid_amount - total_allocated.
+    Return list of pe_info dicts with unallocated > 0, so we can show that amount as advance.
+    """
+    # All unique PE names that appear in PI allocations
+    pe_names = set()
+    for allocations in payment_map_pi.values():
+        for p in allocations:
+            pe_names.add(p.payment_entry)
+    if not pe_names:
+        return []
+
+    # PE total paid in base currency and total allocated (all references) in base
+    placeholders = ", ".join(["%s"] * len(pe_names))
+    pe_rows = frappe.db.sql(
+        f"""
+        SELECT
+            pe.name,
+            pe.base_paid_amount,
+            pe.posting_date,
+            pe.party AS supplier,
+            pe.party_name AS supplier_name,
+            pe.mode_of_payment,
+            pe.status AS pe_status,
+            pe.payment_type,
+            pe.paid_from_account_currency AS currency
+        FROM `tabPayment Entry` pe
+        WHERE pe.name IN ({placeholders})
+        """,
+        tuple(pe_names),
+        as_dict=True,
+    )
+    pe_by_name = {r.name: r for r in pe_rows}
+
+    ref_rows = frappe.db.sql(
+        f"""
+        SELECT
+            parent AS payment_entry,
+            SUM(allocated_amount * COALESCE(exchange_rate, 1)) AS total_allocated_base
+        FROM `tabPayment Entry Reference`
+        WHERE parent IN ({placeholders})
+        GROUP BY parent
+        """,
+        tuple(pe_names),
+        as_dict=True,
+    )
+    total_allocated_by_pe = {r.payment_entry: flt(r.total_allocated_base, 2) for r in ref_rows}
+
+    out = []
+    for pe in pe_by_name.values():
+        total_allocated = total_allocated_by_pe.get(pe.name, 0)
+        base_paid = flt(pe.base_paid_amount, 2)
+        unallocated = flt(base_paid - total_allocated, 2)
+        if unallocated <= 0:
+            continue
+        s = frappe.db.get_value(
+            "Supplier",
+            pe.supplier,
+            ["supplier_name", "msme", "gst_category", "tax_id"],
+            as_dict=True,
+        )
+        pe.supplier_name = (s.supplier_name if s else pe.supplier_name) or pe.supplier
+        pe.msme = s.msme if s else None
+        pe.gst_category = s.gst_category if s else None
+        pe.tax_id = s.tax_id if s else None
+        out.append(frappe._dict(
+            name=pe.name,
+            posting_date=pe.posting_date,
+            supplier=pe.supplier,
+            supplier_name=pe.supplier_name,
+            mode_of_payment=pe.mode_of_payment,
+            pe_status=pe.pe_status,
+            payment_type=pe.payment_type,
+            currency=pe.currency,
+            msme=pe.msme,
+            gst_category=pe.gst_category,
+            tax_id=pe.tax_id,
+            unallocated_base=unallocated,
+        ))
+    return out
 
 
 def _get_outstanding_from_ple(filters):
@@ -1322,8 +1415,56 @@ def _build_je_row(je, payment, invoice_amount, paid_amount, unpaid_amount,
             "Purchase Receipt Date": None,
             "Journal Entry": je.name,  # Keep for reference
             "Journal Entry Ref": None,
-            "Purchase Invoice Status": None,
-        }
+        "Purchase Invoice Status": None,
+    }
+
+
+def _build_unallocated_advance_row(pe_info, report_date=None):
+    """Build a row for the unallocated (excess) portion of a Payment Entry that was
+    created against a supplier invoice. That excess is shown as advance.
+    Payment Entry Value = unallocated amount (positive = advance with supplier).
+    """
+    unallocated = flt(pe_info.unallocated_base, 2)
+    return {
+        "PINV Date": None,
+        "Purchase Invoice": None,
+        "Supplier ID": pe_info.supplier,
+        "Supplier Name": pe_info.supplier_name,
+        "Rounded Amount Net Payable": 0,
+        "Invoice Amount": 0,
+        "Taxable Amount": 0,
+        "CGST Amount": 0,
+        "SGST Amount": 0,
+        "IGST Amount": 0,
+        "Payment Date": pe_info.posting_date,
+        "Payment Entry": pe_info.name,
+        "Payment Entry Value": unallocated,
+        "Paid Amount": 0,
+        "Balance": -unallocated,
+        "Due Date": None,
+        "Paid Date": None,
+        "Due in": None,
+        "MSME": pe_info.msme,
+        "Payment Delay in Days": None,
+        "Payment Status": None,
+        "Payment Mode": pe_info.mode_of_payment,
+        "Payment Entry Status": pe_info.pe_status,
+        "Supplier Invoice No": None,
+        "Supplier Invoice Date": None,
+        "GST Category": pe_info.gst_category,
+        "GST": pe_info.tax_id,
+        "Unpaid Amount": 0,
+        "Overdue Amount": 0,
+        "TDS Amount": 0,
+        "TDS Account": None,
+        "Currency": pe_info.currency,
+        "Purchase Order": None,
+        "Purchase Receipt": None,
+        "Purchase Receipt Date": None,
+        "Journal Entry": None,
+        "Journal Entry Ref": None,
+        "Purchase Invoice Status": None,
+    }
 
 
 def _build_advance_payment_row(pe, report_date=None):

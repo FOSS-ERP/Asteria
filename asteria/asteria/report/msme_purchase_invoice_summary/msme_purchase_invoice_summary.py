@@ -1258,8 +1258,8 @@ def _get_advance_payment_entries(filters):
             pe.mode_of_payment,
             pe.status AS pe_status,
             pe.payment_type,
-            -- Advance portion = PO allocation in base currency
-            SUM(per.allocated_amount * COALESCE(per.exchange_rate, 1)) AS paid_amount,
+            -- Show full Payment Entry paid amount (base/company currency) for PO advances
+            pe.base_paid_amount AS paid_amount,
             pe.paid_from_account_currency AS currency,
             MIN(per.reference_name) AS purchase_order
         FROM `tabPayment Entry` pe
@@ -1275,6 +1275,7 @@ def _get_advance_payment_entries(filters):
             pe.mode_of_payment,
             pe.status,
             pe.payment_type,
+            pe.base_paid_amount,
             pe.paid_from_account_currency
         """,
         tuple(values_po),

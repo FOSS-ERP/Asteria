@@ -143,7 +143,8 @@ override_doctype_class = {
 	"Work Order": "asteria.asteria.override.work_order.CustomWorkOrder",
 	"Production Plan" : "asteria.asteria.override.production_plan.CustomProductionPlan",
 	"Employee Advance" : "asteria.asteria.override.employee_advance.CustomEmployeeAdvance",
-	"Sales Invoice" : "asteria.asteria.override.sales_invoice.CustomSalesInvoice"
+	"Sales Invoice" : "asteria.asteria.override.sales_invoice.CustomSalesInvoice",
+	"Stock Entry": "asteria.asteria.override.stock_entry.CustomStockEntry"
 }
 
 # Document Events

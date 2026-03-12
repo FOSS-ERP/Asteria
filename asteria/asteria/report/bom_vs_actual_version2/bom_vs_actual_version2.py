@@ -73,19 +73,20 @@ def get_columns(filters):
     ]
 
 
+def _se_work_order_expr():
+    """Work order from Stock Entry: use work_order_information for Material Issue when available."""
+    if frappe.db.has_column("Stock Entry", "work_order_information"):
+        return "COALESCE(se.work_order, se.work_order_information)"
+    return "se.work_order"
+
+
 def get_conditions(filters):
     conditions = []
     values = {}
     
     if filters.get("work_order"):
-        # conditions.append("se.work_order = %(work_order)s")
-        conditions.append("""
-        (
-            (se.purpose != 'Material Issue' AND se.work_order = %(work_order)s)
-            OR
-            (se.purpose = 'Material Issue' AND se.work_order = %(work_order)s)
-        )
-        """)
+        wo_expr = _se_work_order_expr()
+        conditions.append(f"({wo_expr} = %(work_order)s)")
         values["work_order"] = filters.get("work_order")
     else:
         if filters.get("from_date"):
@@ -103,6 +104,7 @@ def get_conditions(filters):
 
 
 def get_rows(condition_sql, values):
+    wo_expr = _se_work_order_expr()
     query = f"""
         SELECT
 			so.name AS sales_order,
@@ -113,11 +115,7 @@ def get_rows(condition_sql, values):
 			wo.status AS work_order_status,
 			wo.production_item AS fg_item,
             se.name AS voucher_no,
-            # se.work_order,
-            CASE 
-                WHEN se.purpose = 'Material Issue' THEN se.work_order
-                ELSE se.work_order
-            END AS work_order,
+            {wo_expr} AS work_order,
             se.stock_entry_type,
             sed.item_code AS item_code,
             sed.qty AS qty,
@@ -151,13 +149,8 @@ def get_rows(condition_sql, values):
         FROM `tabStock Entry` se
         INNER JOIN `tabStock Entry Detail` sed
             ON sed.parent = se.name
-        # INNER JOIN `tabWork Order` wo
-        #     ON wo.name = se.work_order AND wo.docstatus = 1
         INNER JOIN `tabWork Order` wo
-            ON wo.name = CASE 
-                            WHEN se.purpose = 'Material Issue' THEN se.work_order
-                            ELSE se.work_order
-                        END
+            ON wo.name = {wo_expr}
             AND wo.docstatus = 1
         LEFT JOIN `tabBOM` bo
             ON bo.name = wo.bom_no
@@ -170,7 +163,7 @@ def get_rows(condition_sql, values):
             (sed.is_finished_item = 1 AND se.purpose = 'Manufacture') 
             OR (sed.is_finished_item = 0 AND se.purpose IN ('Manufacture', 'Material Issue'))
         )
-        ORDER BY se.work_order, se.stock_entry_type DESC, sed.is_finished_item DESC
+        ORDER BY {wo_expr}, se.stock_entry_type DESC, sed.is_finished_item DESC
     """
     rows = frappe.db.sql(query, values, as_dict=True)
     add_transferred_qty(rows)
@@ -196,12 +189,10 @@ def add_transferred_qty(rows):
             r.transferred_qty = 0
         return
 
-    transfer_data = frappe.db.sql("""
+    wo_expr = _se_work_order_expr()
+    transfer_data = frappe.db.sql(f"""
         SELECT
-            CASE 
-                WHEN se.purpose = 'Material Issue' THEN se.work_order
-                ELSE se.work_order
-            END AS work_order_key,
+            {wo_expr} AS work_order_key,
             sed.item_code,
             SUM(ABS(sed.qty)) AS transferred_qty
         FROM `tabStock Entry` se
@@ -210,9 +201,7 @@ def add_transferred_qty(rows):
         WHERE
             se.docstatus = 1
             AND se.purpose = 'Material Issue'
-            AND (
-                se.work_order IN %(work_orders)s OR se.work_order IN %(work_orders)s
-            )
+            AND {wo_expr} IN %(work_orders)s
             AND sed.item_code IN %(items)s
         GROUP BY work_order_key, sed.item_code
     """, {"work_orders": work_orders, "items": items}, as_dict=True)
@@ -304,8 +293,9 @@ def build_tree(rows, bom_cache):
         bom_amount_fg = bom_qty_fg * bom_rate_fg
 
         # FG Consumption from Stock Entry
-        # FG Consumption from Stock Entry including Material Issue
-        cons = frappe.db.sql("""
+        # FG Consumption from Stock Entry including Material Issue (work_order_information)
+        wo_expr = _se_work_order_expr()
+        cons = frappe.db.sql(f"""
             SELECT 
                 SUM(CASE WHEN sed.is_finished_item = 1 THEN sed.qty ELSE 0 END) AS fg_qty,
                 SUM(CASE WHEN sed.is_finished_item = 1 THEN se.total_outgoing_value ELSE 0 END) AS fg_value,
@@ -314,7 +304,7 @@ def build_tree(rows, bom_cache):
             FROM `tabStock Entry` se
             INNER JOIN `tabStock Entry Detail` sed ON sed.parent = se.name
             WHERE se.docstatus = 1
-            AND (se.work_order = %(wo)s OR se.work_order = %(wo)s)
+            AND {wo_expr} = %(wo)s
         """, {"wo": fg.work_order}, as_dict=True)
 
         consumed_qty_fg = (cons[0].fg_qty or 0) + (cons[0].raw_material_qty or 0)
@@ -469,7 +459,7 @@ def build_tree(rows, bom_cache):
                         "transferred_value": final_qty * sr_details[0].get("valuation_rate"),
                         "consumed_qty": final_qty,
                         "consumed_value": final_qty * sr_details[0].get("valuation_rate"),
-~                        "transferred_rate": sr_details[0].get("valuation_rate"),
+                        "transferred_rate": sr_details[0].get("valuation_rate"),
                         "consumed_rate": sr_details[0].get("valuation_rate"),
                     })
 

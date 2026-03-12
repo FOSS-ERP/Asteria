@@ -6,7 +6,7 @@
 # Invoice/Paid amounts not double-counted when multiple payments per voucher
 
 import frappe
-from frappe.utils import flt, getdate, today
+from frappe.utils import flt, getdate, today, cint
 
 
 def execute(filters=None):
@@ -1258,8 +1258,17 @@ def _get_advance_payment_entries(filters):
             pe.mode_of_payment,
             pe.status AS pe_status,
             pe.payment_type,
-            -- Show full Payment Entry paid amount (base/company currency) for PO advances
-            pe.base_paid_amount AS paid_amount,
+            -- PO allocation in base currency
+            SUM(per.allocated_amount * COALESCE(per.exchange_rate, 1)) AS po_allocated_base,
+            -- Total Payment Entry paid in base/company currency
+            pe.base_paid_amount AS base_paid_amount,
+            -- If the PE also references PI/JE, PO row must show ONLY PO-allocated (not total paid)
+            EXISTS (
+                SELECT 1
+                FROM `tabPayment Entry Reference` per2
+                WHERE per2.parent = pe.name
+                  AND per2.reference_doctype IN ('Purchase Invoice', 'Journal Entry')
+            ) AS has_pi_or_je_ref,
             pe.paid_from_account_currency AS currency,
             MIN(per.reference_name) AS purchase_order
         FROM `tabPayment Entry` pe
@@ -1285,6 +1294,13 @@ def _get_advance_payment_entries(filters):
     # Merge both sets, keyed by Payment Entry name to avoid duplicates
     pe_map = {}
     for r in rows_adv + rows_po:
+        # Normalize PO payments:
+        # - If PE has ONLY PO refs -> show full PE base paid amount
+        # - If PE also has PI/JE refs -> show only PO-allocated portion
+        if "po_allocated_base" in r:
+            po_alloc = flt(r.po_allocated_base, 2)
+            base_paid = flt(r.base_paid_amount, 2)
+            r.paid_amount = base_paid if not cint(r.has_pi_or_je_ref) else po_alloc
         if r.name not in pe_map:
             pe_map[r.name] = frappe._dict(r)
 

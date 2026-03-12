@@ -264,6 +264,17 @@ def setup_custom_fields():
                 "default" : 0
             }
         ],
+        "Stock Reconciliation" : [
+            {
+                "label" : "Work Order",
+                "fieldname" : "work_order",
+                "fieldtype" : "Link",
+                "options" : "Work Order",
+                "read_only" : 1,
+                "allow_on_submit" : 1,
+                "insert_after" : "purpose",
+            }
+        ],
         "Purchase Order" : [
             {
                 "label" : "Sales Order",

@@ -426,48 +426,47 @@ def build_tree(rows, bom_cache):
             if not item_code or not fg.work_order:
                 continue
 
-            # Stock Reconciliation may not have work_order column (standard ERPNext doesn't)
+            # Stock Reconciliation: when qty is added back (actual_qty > 0), reduce net consumed
+            # e.g. Manufacture consumed 4, Recon added 1 back -> net transferred/consumed = 3
             sr_details = []
             try:
                 if frappe.db.has_column("Stock Reconciliation", "work_order"):
                     sr_details = frappe.db.sql("""
-                        Select sle.name,
-                            sle.incoming_rate,
-                            sle.has_serial_no,
-                            sle.item_code,
-                            sle.actual_qty,
-                            sle.qty_after_transaction,
-                            sle.posting_date,
-                            sle.valuation_rate
+                        Select sle.actual_qty, sle.valuation_rate
                         From `tabStock Reconciliation` as sr
-                        Left Join `tabStock Ledger Entry` as sle ON sle.voucher_no = sr.name AND sle.voucher_type = 'Stock Reconciliation'
-                        Where sle.is_cancelled = 0 and sr.work_order = %(work_order)s and sle.item_code = %(item_code)s
+                        Inner Join `tabStock Ledger Entry` as sle
+                            ON sle.voucher_no = sr.name AND sle.voucher_type = 'Stock Reconciliation'
+                            AND sle.is_cancelled = 0 AND sle.item_code = %(item_code)s
+                        Where sr.work_order = %(work_order)s
                     """, {"work_order": fg.work_order, "item_code": item_code}, as_dict=1)
             except Exception:
                 pass
 
             if sr_details:
-                if len(sr_details) == 1:
-                    sle_data = [abs(flt(row.actual_qty)) for row in sr_details]
-                else:
-                    sle_data = [abs(flt(row.actual_qty)) for row in sr_details if row.actual_qty < 0]
-                frappe.log_error(item_code, sle_data)
-                if sle_data:
-                    final_qty = abs(sum(sle_data))
+                # actual_qty > 0 = incoming (qty added back by reconciliation)
+                reconciliation_add_back = sum(flt(row.actual_qty) for row in sr_details if flt(row.actual_qty) > 0)
+                if reconciliation_add_back > 0:
+                    net_qty = max(0, consumed_qty - reconciliation_add_back)
+                    avg_rate = (consumed_rate or 0) if consumed_qty else 0
+                    if consumed_qty and consumed_value:
+                        avg_rate = consumed_value / consumed_qty
+                    net_value = net_qty * avg_rate
                     prepared_data.update({
-                        "transferred_qty": final_qty,
-                        "transferred_value": final_qty * sr_details[0].get("valuation_rate"),
-                        "consumed_qty": final_qty,
-                        "consumed_value": final_qty * sr_details[0].get("valuation_rate"),
-                        "transferred_rate": sr_details[0].get("valuation_rate"),
-                        "consumed_rate": sr_details[0].get("valuation_rate"),
+                        "transferred_qty": net_qty,
+                        "transferred_value": net_value,
+                        "consumed_qty": net_qty,
+                        "consumed_value": net_value,
+                        "transferred_rate": avg_rate,
+                        "consumed_rate": avg_rate,
+                        "variance_issue_qty": net_qty - bom_qty,
+                        "variance_issue_value": (net_qty - bom_qty) * bom_rate,
+                        "variance_consumption_qty": net_qty - bom_qty,
+                        "variance_consumption_value": (net_qty - bom_qty) * avg_rate,
+                        "consumed_minus_bom_amount": net_value - bom_amount,
                     })
 
-
-                    
-                    
-            
-            data.append(prepared_data)
+            if flt(prepared_data.get("transferred_qty"), 2) != 0:
+                data.append(prepared_data)
             
 
 

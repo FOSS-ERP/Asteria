@@ -166,11 +166,13 @@ def get_data(filters):
         # Final Paid Amount in PI row = Payment Entries total + JE adjustments
         total_paid_amount = flt(total_payment_entry_value + je_paid_adjustment, 2)
         
-        # Purchase Invoice-wise Balance:
-        #   Balance (PI) = Sum of Rounded Amount Net Payable (PI + all linked JEs)
-        #                  - Sum of Payment Entry Value (all PEs against that PI)
+        # Purchase Invoice-wise Balance = PLE outstanding (matches Accounts Payable).
+        # Using pi_outstanding directly is the only reliable approach because the
+        # arithmetic formula (Rounded Amount - PE Value) misses TDS deductions booked
+        # as separate PLE entries on the PI itself, and accumulates rounding errors on
+        # foreign-currency invoices with multi-decimal exchange rates.
         total_rounded_amount = rounded_amount_pi + je_rounded_amount_total
-        balance_amount = flt(total_rounded_amount - total_payment_entry_value, 2)
+        balance_amount = pi_outstanding
 
         # First row: Purchase Invoice row (with outstanding amount and total paid amount)
         # Payment Delay in Days logic:
@@ -657,19 +659,26 @@ def _get_payment_allocations_by_pi(filters):
         as_dict=True,
     )
 
-    # Base allocated = allocated_amount * exchange_rate (company currency)
+    # Base allocated = allocated_amount * exchange_rate (company currency).
+    # Multiply at full precision first, then round — rounding the exchange rate
+    # before multiplying causes significant errors on foreign-currency invoices.
     result = {}
     for r in rows:
-        base_alloc = flt(r.allocated_amount, 2) * flt(r.exchange_rate or 1, 2)
+        base_alloc = flt(r.allocated_amount * flt(r.exchange_rate or 1), 2)
         r.base_allocated_amount = base_alloc
         result.setdefault(r.purchase_invoice, []).append(r)
     return result
 
 
 def _get_payment_entry_unallocated(filters, payment_map_pi):
-    """For Payment Entries that have at least one PI allocation in scope, compute the
-    unallocated (excess) amount: base_paid_amount - total_allocated.
-    Return list of pe_info dicts with unallocated > 0, so we can show that amount as advance.
+    """For Payment Entries that have at least one PI allocation in scope, find the
+    genuinely unallocated (advance) portion using PLE — not arithmetic on base amounts.
+
+    For foreign-currency PEs the formula (base_paid - allocated * exchange_rate) can
+    produce a false positive because the difference is a forex gain/loss already booked
+    in GL, NOT an actual advance.  The source of truth is PLE: a genuine advance shows
+    as a self-referencing PLE row where both voucher_no and against_voucher_no equal the
+    PE name (against_voucher_type = 'Payment Entry').
     """
     # All unique PE names that appear in PI allocations
     pe_names = set()
@@ -679,8 +688,9 @@ def _get_payment_entry_unallocated(filters, payment_map_pi):
     if not pe_names:
         return []
 
-    # PE total paid in base currency and total allocated (all references) in base
     placeholders = ", ".join(["%s"] * len(pe_names))
+
+    # PE header details
     pe_rows = frappe.db.sql(
         f"""
         SELECT
@@ -701,25 +711,35 @@ def _get_payment_entry_unallocated(filters, payment_map_pi):
     )
     pe_by_name = {r.name: r for r in pe_rows}
 
-    ref_rows = frappe.db.sql(
+    # Use PLE to get genuinely unallocated (advance) amount per PE.
+    # A self-referencing PLE row (voucher_no = against_voucher_no = PE name,
+    # against_voucher_type = 'Payment Entry') represents the true advance balance.
+    ple_rows = frappe.db.sql(
         f"""
         SELECT
-            parent AS payment_entry,
-            SUM(allocated_amount * COALESCE(exchange_rate, 1)) AS total_allocated_base
-        FROM `tabPayment Entry Reference`
-        WHERE parent IN ({placeholders})
-        GROUP BY parent
+            ple.voucher_no AS payment_entry,
+            SUM(ple.amount) AS advance_amount
+        FROM `tabPayment Ledger Entry` ple
+        WHERE ple.voucher_no IN ({placeholders})
+            AND ple.against_voucher_type = 'Payment Entry'
+            AND ple.against_voucher_no = ple.voucher_no
+            AND ple.delinked = 0
+        GROUP BY ple.voucher_no
         """,
         tuple(pe_names),
         as_dict=True,
     )
-    total_allocated_by_pe = {r.payment_entry: flt(r.total_allocated_base, 2) for r in ref_rows}
+    # advance_amount from PLE is negative (payment reduces payable);
+    # the unallocated advance to display is its absolute value.
+    unallocated_by_pe = {
+        r.payment_entry: flt(abs(r.advance_amount), 2)
+        for r in ple_rows
+        if flt(r.advance_amount, 2) < 0
+    }
 
     out = []
     for pe in pe_by_name.values():
-        total_allocated = total_allocated_by_pe.get(pe.name, 0)
-        base_paid = flt(pe.base_paid_amount, 2)
-        unallocated = flt(base_paid - total_allocated, 2)
+        unallocated = unallocated_by_pe.get(pe.name, 0)
         if unallocated <= 0:
             continue
         s = frappe.db.get_value(
@@ -775,7 +795,7 @@ def _get_outstanding_from_ple(filters):
         SELECT
             ple.against_voucher_type AS voucher_type,
             ple.against_voucher_no AS voucher_no,
-            SUM(ple.amount_in_account_currency) AS outstanding
+            SUM(ple.amount) AS outstanding
         FROM `tabPayment Ledger Entry` ple
         WHERE {where}
         GROUP BY ple.against_voucher_type, ple.against_voucher_no, ple.party
@@ -906,7 +926,12 @@ def _get_journal_entry_by_pi(purchase_invoices):
 
 def _get_journal_entries_from_ple(filters):
     """Get Journal Entries from PLE (including those with negative outstanding).
-    These are JEs that appear in Accounts Payable, regardless of outstanding sign."""
+    These are JEs that appear in Accounts Payable, regardless of outstanding sign.
+    Note: The ple.against_voucher_type = 'Journal Entry' condition already ensures
+    we only fetch the self-referencing (unlinked) outstanding portion of the JE.
+    JEs that also partially reference PIs (like contra/adjustment entries) should
+    still appear here for their unlinked portion — so we do NOT exclude them via
+    NOT EXISTS on PI references."""
     conditions = [
         "ple.delinked = 0",
         "ple.account_type = 'Payable'",
@@ -914,7 +939,6 @@ def _get_journal_entries_from_ple(filters):
         "ple.against_voucher_type = 'Journal Entry'",
         "ple.against_voucher_no IS NOT NULL",
         "je.docstatus = 1",
-        "NOT EXISTS (SELECT 1 FROM `tabJournal Entry Account` x WHERE x.parent = je.name AND x.reference_type = 'Purchase Invoice')",
     ]
     values = []
     if filters.get("company"):
@@ -1173,7 +1197,7 @@ def _get_payment_allocations_by_je(filters):
     )
     result = {}
     for r in rows:
-        base_alloc = flt(r.allocated_amount, 2) * flt(r.exchange_rate or 1, 2)
+        base_alloc = flt(r.allocated_amount * flt(r.exchange_rate or 1), 2)
         r.base_allocated_amount = base_alloc
         result.setdefault(r.journal_entry, []).append(r)
     return result

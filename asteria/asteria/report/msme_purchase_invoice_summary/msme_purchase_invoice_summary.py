@@ -906,7 +906,12 @@ def _get_journal_entry_by_pi(purchase_invoices):
 
 def _get_journal_entries_from_ple(filters):
     """Get Journal Entries from PLE (including those with negative outstanding).
-    These are JEs that appear in Accounts Payable, regardless of outstanding sign."""
+    These are JEs that appear in Accounts Payable, regardless of outstanding sign.
+    Note: The ple.against_voucher_type = 'Journal Entry' condition already ensures
+    we only fetch the self-referencing (unlinked) outstanding portion of the JE.
+    JEs that also partially reference PIs (like contra/adjustment entries) should
+    still appear here for their unlinked portion — so we do NOT exclude them via
+    NOT EXISTS on PI references."""
     conditions = [
         "ple.delinked = 0",
         "ple.account_type = 'Payable'",
@@ -914,7 +919,6 @@ def _get_journal_entries_from_ple(filters):
         "ple.against_voucher_type = 'Journal Entry'",
         "ple.against_voucher_no IS NOT NULL",
         "je.docstatus = 1",
-        "NOT EXISTS (SELECT 1 FROM `tabJournal Entry Account` x WHERE x.parent = je.name AND x.reference_type = 'Purchase Invoice')",
     ]
     values = []
     if filters.get("company"):

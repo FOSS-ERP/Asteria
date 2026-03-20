@@ -300,7 +300,12 @@ def get_data(filters):
             ))
 
     # Add advance / Purchase Order Payment Entry rows (no PI/JE reference)
+    # Skip PEs that are already shown as unallocated advance rows (PLE-based) to avoid double-counting.
+    # A PE with both PO and PI references appears in both _get_advance_payment_entries (PO section)
+    # and _get_payment_entry_unallocated (PLE-based); the PLE amount already captures the full advance.
     for pe in advance_payments:
+        if pe.name in unallocated_by_pe:
+            continue
         data.append(_build_advance_payment_row(
             pe=pe,
             report_date=report_date,

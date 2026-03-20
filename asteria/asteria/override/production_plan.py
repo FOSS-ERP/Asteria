@@ -27,9 +27,9 @@ class CustomProductionPlan(ProductionPlan):
 			# changes by fosserp start
 			if sales_order:
 				po.sales_order = sales_order
-				po.cost_center = self.custom_cost_center or frappe.get_cached_value("Sales Order", sales_order, "cost_center")
-				po.project = self.custom_project or frappe.get_cached_value("Sales Order", sales_order, "project")
-				po.business_unit = self.custom_business_unit or frappe.get_cached_value("Sales Order", sales_order, "business_unit")
+				po.cost_center = frappe.db.get_value("Sales Order", sales_order, "cost_center")
+				po.project = frappe.db.get_value("Sales Order", sales_order, "project")
+				po.business_unit = frappe.db.get_value("Sales Order", sales_order, "business_unit")
 			
 
 			if material_request:

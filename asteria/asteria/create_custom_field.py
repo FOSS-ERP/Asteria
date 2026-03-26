@@ -292,7 +292,15 @@ def setup_custom_fields():
                 "read_only" : 1,
                 "insert_after" : "sales_order",
             }
-        ],        
+        ],  
+        "Non Conformance" : [
+            {
+                "label" : "Fiscal year",
+                "fieldname" : "fiscal_year",
+                "fieldtype" : "Data",
+                "hidden" : 1,
+            },
+        ]      
     }
     
     create_custom_fields(custom_fields)

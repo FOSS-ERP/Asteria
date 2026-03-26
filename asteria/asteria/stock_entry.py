@@ -126,7 +126,8 @@ def submit_stock_entry(stock_entry):
 def warn_manufacture_batch_from_work_order(self):
     """Show a warning (msgprint) on save/draft if any raw-material row
     uses a batch that is invalid for the Work Order. Allows saving."""
-    _check_manufacture_batches(self, block=False)
+    # _check_manufacture_batches(self, block=False)
+    return
 
 
 def validate_manufacture_batch_from_work_order(self):

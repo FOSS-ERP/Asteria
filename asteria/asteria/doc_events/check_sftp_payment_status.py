@@ -58,13 +58,19 @@ def check_status():
                             payment_doc.reference_no = utr_no
                             payment_doc.save()
                             payment_doc.submit()
-                        except Exception:
+                        except Exception as e:
                             failed_submit.append(payment_entry)
+                            frappe.sendmail(
+                                recipients=["viral@fosserp.com"],
+                                subject=f"Payment Entry Submit Failed: {payment_entry}",
+                                message=f"<p>Failed to save/submit Payment Entry <b>{payment_entry}</b>.</p><pre>{frappe.get_traceback()}</pre>"
+                            )
 
                         if payment_doc.party_type == "Employee":
-                            document_type = "Expense Claim"
+                            document_type = payment_doc.references[0].reference_doctype
                         else:
                             document_type = "Purchase Order"
+                            
                         h2h_log.custom_status = status
                         total_paid_amount += flt(row[9])
 
@@ -83,6 +89,11 @@ def check_status():
                             )
                 except Exception:
                     frappe.log_error(frappe.get_traceback(), "CSV Processing Failed")
+                    frappe.sendmail(
+                        recipients=["viral@fosserp.com"],
+                        subject="CSV Processing Failed - H2H Payment Status",
+                        message=f"<p>An error occurred while processing row in CSV file <b>{local_file}</b>.</p><pre>{frappe.get_traceback()}</pre>"
+                    )
 
         # ✅ Save log again after processing rows
         h2h_log.total_paid_amount = total_paid_amount

@@ -91,7 +91,7 @@ def get_data(filters):
             invoice_amount = flt(pi.base_grand_total, 2)
 
         # Unpaid = PLE outstanding (matches Accounts Payable report)
-        pi_outstanding = flt(outstanding_map.get(("Purchase Invoice", pi.name), 0), 2)
+        pi_outstanding = flt(outstanding_map.get(("Purchase Invoice", pi.name, pi.supplier), 0), 2)
 
         is_delay = (
             pi_outstanding > 0
@@ -257,7 +257,7 @@ def get_data(filters):
     # Add standalone Journal Entry rows
     for je in journal_entries:
         payments = payment_map_je.get(je.name, [])
-        je_outstanding = flt(outstanding_map.get(("Journal Entry", je.name), 0), 2)
+        je_outstanding = flt(outstanding_map.get(("Journal Entry", je.name, je.supplier), 0), 2)
         # For standalone JEs (not linked to PI), Invoice Amount = 0
         # Unpaid Amount = Outstanding Amount (they are the same)
         je_invoice_amount = 0
@@ -300,7 +300,12 @@ def get_data(filters):
             ))
 
     # Add advance / Purchase Order Payment Entry rows (no PI/JE reference)
+    # Skip PEs that are already shown as unallocated advance rows (PLE-based) to avoid double-counting.
+    # A PE with both PO and PI references appears in both _get_advance_payment_entries (PO section)
+    # and _get_payment_entry_unallocated (PLE-based); the PLE amount already captures the full advance.
     for pe in advance_payments:
+        if pe.name in unallocated_by_pe:
+            continue
         data.append(_build_advance_payment_row(
             pe=pe,
             report_date=report_date,
@@ -795,6 +800,7 @@ def _get_outstanding_from_ple(filters):
         SELECT
             ple.against_voucher_type AS voucher_type,
             ple.against_voucher_no AS voucher_no,
+            ple.party,
             SUM(ple.amount) AS outstanding
         FROM `tabPayment Ledger Entry` ple
         WHERE {where}
@@ -805,7 +811,7 @@ def _get_outstanding_from_ple(filters):
     )
     result = {}
     for r in rows:
-        key = (r.voucher_type, r.voucher_no)
+        key = (r.voucher_type, r.voucher_no, r.party)
         result[key] = result.get(key, 0) + flt(r.outstanding, 2)
     return result
 
@@ -972,8 +978,9 @@ def _get_journal_entries_from_ple(filters):
     )
     je_map = {}
     for r in rows:
-        if r.name not in je_map:
-            je_map[r.name] = frappe._dict({
+        key = (r.name, r.supplier)
+        if key not in je_map:
+            je_map[key] = frappe._dict({
                 "name": r.name,
                 "posting_date": r.posting_date,
                 "bill_no": r.bill_no,
@@ -1040,8 +1047,9 @@ def _get_standalone_journal_entries(filters):
     )
     je_map = {}
     for r in rows:
-        if r.name not in je_map:
-            je_map[r.name] = frappe._dict({
+        key = (r.name, r.supplier)
+        if key not in je_map:
+            je_map[key] = frappe._dict({
                 "name": r.name,
                 "posting_date": r.posting_date,
                 "bill_no": r.bill_no,
@@ -1050,7 +1058,7 @@ def _get_standalone_journal_entries(filters):
                 "supplier": r.supplier,
                 "currency": r.currency,
             })
-        je_map[r.name].credit_amount = je_map[r.name].get("credit_amount", 0) + flt(r.credit_amount, 2)
+        je_map[key].credit_amount = je_map[key].get("credit_amount", 0) + flt(r.credit_amount, 2)
     for je in je_map.values():
         s = frappe.db.get_value("Supplier", je.supplier, ["supplier_name", "msme", "gst_category", "tax_id"], as_dict=True)
         je.supplier_name = s.supplier_name if s else je.supplier
@@ -1131,9 +1139,10 @@ def _get_tds_deduction_journal_entries(filters):
     
     je_map = {}
     for r in je_rows:
-        if r.name not in je_map:
+        key = (r.name, r.supplier)
+        if key not in je_map:
             tds_info = tds_map.get(r.name, {})
-            je_map[r.name] = frappe._dict({
+            je_map[key] = frappe._dict({
                 "name": r.name,
                 "posting_date": r.posting_date,
                 "bill_no": r.bill_no,
@@ -1144,7 +1153,7 @@ def _get_tds_deduction_journal_entries(filters):
                 "tds_account": tds_info.get("account"),
                 "tds_amount": flt(tds_info.get("amount", 0), 2),
             })
-        je_map[r.name].credit_amount = je_map[r.name].get("credit_amount", 0) + flt(r.credit_amount, 2)
+        je_map[key].credit_amount = je_map[key].get("credit_amount", 0) + flt(r.credit_amount, 2)
     for je in je_map.values():
         s = frappe.db.get_value("Supplier", je.supplier, ["supplier_name", "msme", "gst_category", "tax_id"], as_dict=True)
         je.supplier_name = s.supplier_name if s else je.supplier

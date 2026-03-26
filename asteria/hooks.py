@@ -189,7 +189,7 @@ doc_events = {
 		"on_submit": "asteria.asteria.doc_events.work_order.on_submit",
 	},
 	"NC Actions" : {
-		"after_insert" : "asteria.asteria.doc_events.nc_action.after_insert"
+		"validate" : "asteria.asteria.doc_events.nc_action.validate"
 	}
 }
 

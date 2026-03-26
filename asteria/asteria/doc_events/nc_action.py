@@ -2,11 +2,16 @@ import frappe
 from frappe.utils import get_url_to_form
 
 
-def after_insert(doc, method):
-	"""Send email notification to action_owner when an NC Action is created."""
+def validate(doc, method):
+	"""Send email notification to action_owner when action_owner is first set."""
 	if not doc.action_owner:
 		return
 
+	doc_before = doc.get_doc_before_save()
+	previous_owner = doc_before.action_owner if doc_before else None
+	if doc.action_owner == previous_owner:
+		return
+	
 	action_owner_name = frappe.get_value("User", doc.action_owner, "full_name") or doc.action_owner
 	document_link = get_url_to_form("NC Actions", doc.name)
 

@@ -190,6 +190,9 @@ doc_events = {
 	},
 	"NC Actions" : {
 		"validate" : "asteria.asteria.doc_events.nc_action.validate"
+	},
+	"Non Conformance" : {
+		"before_validate" : "asteria.asteria.doc_events.non_conformance.before_validate"
 	}
 }
 

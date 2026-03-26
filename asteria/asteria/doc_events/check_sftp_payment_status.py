@@ -55,7 +55,8 @@ def check_status():
                         payment_doc = frappe.get_doc("Payment Entry", payment_entry)
 
                         try:
-                            payment_doc.reference_no = utr_no
+                            if utr_no:
+                                payment_doc.reference_no = utr_no
                             payment_doc.save()
                             payment_doc.submit()
                         except Exception as e:
@@ -66,11 +67,7 @@ def check_status():
                                 message=f"<p>Failed to save/submit Payment Entry <b>{payment_entry}</b>.</p><pre>{frappe.get_traceback()}</pre>"
                             )
 
-                        if payment_doc.party_type == "Employee":
-                            document_type = payment_doc.references[0].reference_doctype
-                        else:
-                            document_type = "Purchase Order"
-                            
+                                                
                         h2h_log.custom_status = status
                         total_paid_amount += flt(row[9])
 

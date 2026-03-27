@@ -277,6 +277,13 @@ def setup_custom_fields():
         ],
         "COC" : [
             {
+                "label" : "Naming Series",
+                "fieldname" : "naming_series",
+                "fieldtype" : "Select",
+                "options" : "",
+                "insert_after" : "",
+            },
+            {
                 "label" : "Fiscal Year",
                 "fieldname" : "fiscal_year",
                 "fieldtype" : "Data",
@@ -285,6 +292,13 @@ def setup_custom_fields():
             }
         ],
         "UIN" : [
+            {
+                "label" : "Naming Series",
+                "fieldname" : "naming_series",
+                "fieldtype" : "Select",
+                "options" : "",
+                "insert_after" : "",
+            },
             {
                 "label" : "Fiscal Year",
                 "fieldname" : "fiscal_year",

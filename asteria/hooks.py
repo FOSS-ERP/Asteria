@@ -190,15 +190,19 @@ doc_events = {
 		"on_submit": "asteria.asteria.doc_events.work_order.on_submit",
 	},
 	"NC Actions" : {
+		"autoname" : "asteria.asteria.doc_events.nc_action.autoname",
 		"validate" : "asteria.asteria.doc_events.nc_action.validate"
 	},
 	"Non Conformance" : {
+		"autoname" : "asteria.asteria.doc_events.non_conformance.autoname",
 		"before_validate" : "asteria.asteria.doc_events.non_conformance.before_validate"
 	},
 	"COC" : {
+		"autoname" : "asteria.asteria.doc_events.coc_uin.autoname",
 		"before_validate" : "asteria.asteria.doc_events.coc_uin.before_validate"
 	},
 	"UIN" : {
+		"autoname" : "asteria.asteria.doc_events.coc_uin.autoname",
 		"before_validate" : "asteria.asteria.doc_events.coc_uin.before_validate"
 	}
 }

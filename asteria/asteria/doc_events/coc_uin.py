@@ -2,6 +2,11 @@ import frappe
 from frappe.utils import getdate
 
 
+def autoname(doc, method=None):
+	date = getdate(doc.creation) if doc.creation else getdate()
+	doc.fiscal_year = get_fiscal_year_label(date)
+
+
 def before_validate(doc, method=None):
 	date = getdate(doc.creation) if doc.creation else getdate()
 	doc.fiscal_year = get_fiscal_year_label(date)

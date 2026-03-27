@@ -1,6 +1,48 @@
 import frappe
-from frappe.utils import get_url_to_form
+from frappe.utils import get_url_to_form, getdate
+from asteria.asteria.doc_events.non_conformance import get_fiscal_year_label
 
+DIVISION_ACRONYM_MAP = {
+	"Sales & BD": "SBD",
+	"Product Management-Hardware": "PMH",
+	"Engineering-Hardware-Project Management": "ENH-PM",
+	"Engineering-Hardware-System Engineering": "ENH-SE",
+	"Engineering-Hardware-Design": "ENH-DS",
+	"Engineering-Hardware-Embedded": "ENH-ES",
+	"Engineering-Hardware-Validation & Verification": "ENH-VV",
+	"Engineering-Hardware-Manufacturing Engineering": "ENH-ME",
+	"Engineering-Software": "ENS",
+	"SCM": "SCM",
+	"Inventory": "INV",
+	"Supplier Quality Assurance": "SQA",
+	"Production-PPC": "PDN-PL",
+	"Production-Shopfloor": "PDN-PS",
+	"Quality Control-In coming": "QCO-IQC",
+	"Quality Control-In process": "QCO-IPQC",
+	"Quality Control-Flight Test": "QCO-FTQC",
+	"Customer Support": "CUS",
+	"Program Management": "PRM",
+	"DaaS Flight Operations": "FOP",
+	"Data Processing and Delivery": "DPD",
+	"DaaS Project Management": "DPM",
+	"Facilities & Administration": "ADM",
+	"Finance": "FIN",
+	"Human Resources": "HRS",
+	"Legal & Compliance": "LGL",
+	"Marketing": "MKT",
+	"Quality Assurance": "QAS",
+	"Regulatory & Policy Affairs": "RPA",
+	"Strategy and Planning": "SNP",
+	"Technology Support": "TSU",
+}
+
+
+def autoname(doc, method=None):
+	doc.acronym = DIVISION_ACRONYM_MAP.get(doc.division, "")
+	date = getdate(doc.creation) if doc.creation else getdate()
+	doc.fiscal_year = get_fiscal_year_label(date)
+	if not doc.naming_series:
+		doc.naming_series = ".{nc_id}.-.{nc_type}.-.{acronym}.-.##"
 
 def validate(doc, method):
 	"""Send email notification to action_owner when action_owner is first set."""

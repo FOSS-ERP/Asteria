@@ -52,7 +52,8 @@ doctype_js = {
 	"Job Card" : "public/js/job_card.js",
 	"Sales Order" : "public/js/sales_order.js",
 	"Production Plan" : "public/js/production_plan.js",
-	"Material Request" : "public/js/material_request.js"
+	"Material Request" : "public/js/material_request.js",
+	"NC Actions" : "public/js/nc_actions.js"
 	}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -193,6 +194,12 @@ doc_events = {
 	},
 	"Non Conformance" : {
 		"before_validate" : "asteria.asteria.doc_events.non_conformance.before_validate"
+	},
+	"COC" : {
+		"before_validate" : "asteria.asteria.doc_events.coc_uin.before_validate"
+	},
+	"UIN" : {
+		"before_validate" : "asteria.asteria.doc_events.coc_uin.before_validate"
 	}
 }
 

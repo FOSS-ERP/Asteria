@@ -275,6 +275,24 @@ def setup_custom_fields():
                 "insert_after" : "purpose",
             }
         ],
+        "COC" : [
+            {
+                "label" : "Fiscal Year",
+                "fieldname" : "fiscal_year",
+                "fieldtype" : "Data",
+                "insert_after" : "naming_series",
+                "hidden" : 1
+            }
+        ],
+        "UIN" : [
+            {
+                "label" : "Fiscal Year",
+                "fieldname" : "fiscal_year",
+                "fieldtype" : "Data",
+                "insert_after" : "naming_series",
+                "hidden" : 1
+            }
+        ],
         "Purchase Order" : [
             {
                 "label" : "Sales Order",
@@ -292,7 +310,16 @@ def setup_custom_fields():
                 "read_only" : 1,
                 "insert_after" : "sales_order",
             }
-        ],    
+        ],
+        "NC Actions" : [
+            {
+                "label" : "Acronym",
+                "fieldname" : "acronym",
+                "fieldtype" : "Data",
+                "insert_after" : "division",
+                "read_only" : 1
+            }
+        ],
     }
     
     create_custom_fields(custom_fields)

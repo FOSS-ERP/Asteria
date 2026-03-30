@@ -275,38 +275,6 @@ def setup_custom_fields():
                 "insert_after" : "purpose",
             }
         ],
-        "COC" : [
-            {
-                "label" : "Naming Series",
-                "fieldname" : "naming_series",
-                "fieldtype" : "Select",
-                "options" : "",
-                "insert_after" : "",
-            },
-            {
-                "label" : "Fiscal Year",
-                "fieldname" : "fiscal_year",
-                "fieldtype" : "Data",
-                "insert_after" : "naming_series",
-                "hidden" : 1
-            }
-        ],
-        "UIN" : [
-            {
-                "label" : "Naming Series",
-                "fieldname" : "naming_series",
-                "fieldtype" : "Select",
-                "options" : "",
-                "insert_after" : "",
-            },
-            {
-                "label" : "Fiscal Year",
-                "fieldname" : "fiscal_year",
-                "fieldtype" : "Data",
-                "insert_after" : "naming_series",
-                "hidden" : 1
-            }
-        ],
         "Purchase Order" : [
             {
                 "label" : "Sales Order",

@@ -18,7 +18,7 @@ class DeliveryRequirementSheet(Document):
             self.revision = 0
 
 @frappe.whitelist()
-def create_new_version(docname):
+def create_new_version(docname, reason=None):
     try:
         doc = frappe.get_doc("Delivery Requirement Sheet", docname)
 
@@ -56,6 +56,10 @@ def create_new_version(docname):
         new_doc.revision = new_revision
         new_doc.previous_reference = doc.name
         new_doc.is_active = 1  # Only active version
+
+        # set version reason
+        if reason and hasattr(new_doc, "custom_version_reason"):
+            new_doc.custom_version_reason = reason
 
         # Remove amended_from if present
         if hasattr(new_doc, "amended_from"):

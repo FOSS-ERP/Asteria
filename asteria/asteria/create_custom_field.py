@@ -293,15 +293,6 @@ def setup_custom_fields():
                 "insert_after" : "sales_order",
             }
         ],
-        "NC Actions" : [
-            {
-                "label" : "Acronym",
-                "fieldname" : "acronym",
-                "fieldtype" : "Data",
-                "insert_after" : "division",
-                "read_only" : 1
-            }
-        ],
     }
     
     create_custom_fields(custom_fields)

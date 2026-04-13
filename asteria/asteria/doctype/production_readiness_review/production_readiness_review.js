@@ -33,17 +33,39 @@ frappe.ui.form.on('Production Readiness Review', {
         if (!frm.is_new()) {
             // Add "Create New Version" button
             frm.add_custom_button(__('Create New Version'), () => {
-                frappe.confirm(
-                    __('Are you sure you want to create a new version?'),
-                    () => {
+                const dialog = new frappe.ui.Dialog({
+                    title: __("Create New Version"),
+                    fields: [
+                        {
+                            fieldtype: "Small Text",
+                            fieldname: "version_reason",
+                            label: __("Reason for creating new version"),
+                            description: __("Please provide a reason why a new version is being created.")
+                        }
+                    ],
+                    primary_action_label: __("Create"),
+                    primary_action(values) {
+                        if (!values.version_reason || !values.version_reason.trim()) {
+                            frappe.msgprint({
+                                title: __("Validation Error"),
+                                indicator: "red",
+                                message: __("Please enter a reason for creating new version.")
+                            });
+                            return;
+                        }
+                        dialog.hide();
+
                         frappe.call({
-                            method: 'asteria.asteria.doctype.production_readiness_review.production_readiness_review.create_new_version',
-                            args: { docname: frm.doc.name },
+                            method: "asteria.asteria.doctype.production_readiness_review.production_readiness_review.create_new_version",
+                            args: {
+                                docname: frm.doc.name,
+                                reason: values.version_reason
+                            },
                             callback: function(r) {
                                 if (r.message) {
                                     frappe.msgprint({
-                                        title: __('Success'),
-                                        indicator: 'green',
+                                        title: __("Success"),
+                                        indicator: "green",
                                         message: __('New version {0} created and activated. Previous versions have been deactivated.', [r.message.name])
                                     });
                                     frappe.set_route('Form', 'Production Readiness Review', r.message.name);
@@ -51,14 +73,19 @@ frappe.ui.form.on('Production Readiness Review', {
                             },
                             error: function(err) {
                                 frappe.msgprint({
-                                    title: __('Error'),
-                                    indicator: 'red',
-                                    message: __('Failed to create new version: {0}', [err])
+                                    title: __("Error"),
+                                    indicator: "red",
+                                    message: __("Failed to create new version: {0}", [err.message || err])
                                 });
                             }
                         });
+                    },
+                    secondary_action_label: __("Cancel"),
+                    secondary_action () {
+                        dialog.hide();
                     }
-                );
+                });
+                dialog.show();
             }).addClass('btn-primary');
         }
     },

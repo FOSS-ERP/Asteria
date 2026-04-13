@@ -187,7 +187,7 @@ def create_payment_entry_(document_type, invoices, bank_account):
 		for row in selected_invoices:
 			pe = get_payment_entry_for_employee_(document_type, row, bank_account = bank_account)
 			pe.ignore_permissions = 1
-			pe.project = frappe.db.get_value("Employee Advance", row, "project")
+			pe.project = frappe.db.get_value("Employee Advance", row, "custom_project")
 			pe.reference_no = "Waiting From Bank"
 			pe.reference_date = getdate()
 			pe.ignore_mandatory = True

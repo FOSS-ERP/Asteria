@@ -185,7 +185,6 @@ def make_corrective_job_card(source_name, operation=None, for_operation=None, ta
 		target.set("sub_operations", [])
 		target.set_sub_operations()
 		target.get_required_items()
-		target.validate_time_logs()
 		if target.for_job_card:
 			if frappe.db.exists("Job Card", {
 				"is_corrective_job_card" : 1,

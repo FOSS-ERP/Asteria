@@ -306,6 +306,7 @@ def init_group(sle, batch_serial_type, serial_batch_no):
 		"outward_qty": 0.0,
 		"outward_value": 0.0,
 		"warehouses": set(),
+		"warehouse_data": {},   # per-warehouse breakdown: {wh: {inward_qty, inward_value, outward_qty, outward_value}}
 		"first_inward_date": None,
 	}
 
@@ -319,12 +320,20 @@ def add_txn_to_group(group, sle, qty, value, rate):
 		"rate": rate,
 		"is_inward": inward,
 	})
-	group["warehouses"].add(sle.warehouse)
+	wh = sle.warehouse
+	group["warehouses"].add(wh)
+
+	# Per-warehouse breakdown
+	if wh not in group["warehouse_data"]:
+		group["warehouse_data"][wh] = {"inward_qty": 0.0, "inward_value": 0.0, "outward_qty": 0.0, "outward_value": 0.0}
+	wh_data = group["warehouse_data"][wh]
 
 	if qty > 0:
 		# Positive qty = stock increased at this warehouse (purchase or transfer-in)
 		group["inward_qty"] += qty
 		group["inward_value"] += abs(value)
+		wh_data["inward_qty"] += qty
+		wh_data["inward_value"] += abs(value)
 		# Ageing: track first genuine procurement date only
 		if inward and not group["first_inward_date"]:
 			group["first_inward_date"] = sle.posting_date
@@ -332,6 +341,8 @@ def add_txn_to_group(group, sle, qty, value, rate):
 		# Negative qty = stock decreased (delivery, transfer-out, consumption)
 		group["outward_qty"] += abs(qty)
 		group["outward_value"] += abs(value)
+		wh_data["outward_qty"] += abs(qty)
+		wh_data["outward_value"] += abs(value)
 
 
 def get_data(filters):
@@ -407,7 +418,6 @@ def get_data(filters):
 		outward_value = group["outward_value"]
 		closing_qty = inward_qty - outward_qty
 		closing_value = inward_value - outward_value
-		warehouse_str = ", ".join(sorted(group["warehouses"]))
 
 		ageing_days = 0
 		if group["first_inward_date"]:
@@ -456,20 +466,29 @@ def get_data(filters):
 
 			data.append(row)
 
-		# Summary row for this item/batch group
-		summary = make_base_row(group)
-		summary.update({
-			"txn_type": "",
-			"inward_qty": inward_qty,
-			"inward_value": inward_value,
-			"outward_qty": outward_qty,
-			"outward_value": outward_value,
-			"closing_qty": closing_qty,
-			"closing_value": closing_value,
-			"warehouse": warehouse_str,
-			"ageing_days": ageing_days,
-		})
-		data.append(summary)
+		# One summary row per warehouse for this item/batch group
+		for wh in sorted(group["warehouse_data"].keys()):
+			wh_data = group["warehouse_data"][wh]
+			wh_inward_qty   = wh_data["inward_qty"]
+			wh_inward_value = wh_data["inward_value"]
+			wh_outward_qty   = wh_data["outward_qty"]
+			wh_outward_value = wh_data["outward_value"]
+			wh_closing_qty   = wh_inward_qty - wh_outward_qty
+			wh_closing_value = wh_inward_value - wh_outward_value
+
+			summary = make_base_row(group)
+			summary.update({
+				"txn_type": "",
+				"inward_qty": wh_inward_qty,
+				"inward_value": wh_inward_value,
+				"outward_qty": wh_outward_qty,
+				"outward_value": wh_outward_value,
+				"closing_qty": wh_closing_qty,
+				"closing_value": wh_closing_value,
+				"warehouse": wh,
+				"ageing_days": ageing_days,
+			})
+			data.append(summary)
 
 	return data
 
